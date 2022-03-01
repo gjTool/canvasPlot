@@ -1,0 +1,25 @@
+{
+  "name": "canvasplot",
+  "version": "0.0.1",
+  "description": "canvas canvasPlot",
+  "main": "canvasPlot.min.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gjTool/canvasPlot.git"
+  },
+  "keywords": [
+    "canvas",
+    "canvasplot",
+    "canvasPlot",
+    "rect"
+  ],
+  "author": "gjtool",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/gjTool/canvasPlot/issues"
+  },
+  "homepage": "https://github.com/gjTool/canvasPlot#readme"
+}
