@@ -12,7 +12,7 @@
 
 ## 快速使用（有两种方式）
 
-#### 一、script标签引入方式（需下载本项目文件夹css/pdfh5.css、js内所有文件）
+#### 一、script标签引入方式
 
 
 ```javascript
@@ -94,6 +94,9 @@ export default {
 			h: 30
 		});
 		canvasPlot.drawRectBegin();
+		canvasPlot.on("drawFinish",function(){
+			//somecode
+		})
 	}
 }
 </script>
