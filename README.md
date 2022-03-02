@@ -52,7 +52,7 @@ npm install canvasplot
   </div>
 </template>
 <script>
-import Canvasplot from "canvasplot";
+import CanvasPlot from "canvasplot";
 export default {
     name: 'App',
 	data() {
