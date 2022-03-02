@@ -34,20 +34,6 @@ var canvasPlot = new CanvasPlot({
 	height: 500,
 	imagePath: '3.jpg'
 });
-
-canvasPlot.addRect({
-	x: 212,
-	y: 119,
-	w: 50,
-	h: 50
-});
-canvasPlot.addRect({
-	x: 280,
-	y: 126,
-	w: 60,
-	h: 30
-});
-canvasPlot.drawRectBegin();
 ```
 
 ####  二、npm安装方式
