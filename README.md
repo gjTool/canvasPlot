@@ -10,6 +10,9 @@
 
 - [canvasplot项目gitee地址](https://gitee.com/gjTool/canvasplot)
 
+### 在线示例
+https://www.gjtool.cn/canvasplot/index.html
+
 ## 快速使用（有两种方式）
 
 #### 一、script标签引入方式
