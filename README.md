@@ -13,6 +13,7 @@
 ### 在线示例
 https://www.gjtool.cn/canvasplot/index.html
 
+
 ## 快速使用（有两种方式）
 
 #### 一、script标签引入方式
@@ -95,18 +96,31 @@ export default {
 
 |参数名称	|类型		|取值	|是否必须	|作用				|
 |:---:		|:---:		|:---:	|:---:		|:---:				|
-|parentNode	|  {HTMLelement}	| -		| √		|canvasPlot的父元素	|
-|width	|  {Number}	| -		|  √			|canvasPlot的宽	|
-|height	|  {Number}	| -		|  √				|canvasPlot的高	|
-|imagePath	|  {String}	| -		|  √			|canvasPlot的图片路径	|
+|parentNode	|  HTMLelement	| -		| √		|canvasPlot的父元素	|
+|width	|  Number	| -		|  √			|canvasPlot的宽	|
+|height	|  Number	| -		|  √				|canvasPlot的高	|
+|imagePath	|  String	| -		|  √			|canvasPlot的图片路径	|
+
 ## methods 方法列表
 
 
 |方法名			|传参				|传参取值			|作用				|
 |:---:			|:---:				|:---:				|:---:				|
-|addRect	| {Object}			|{x:10,y:10,w:40,h:40}		|手动添加矩形	|
+|addRect	| Object			|{x:10,y:10,w:40,h:40}		|手动添加矩形	|
+|delPlot	| Object			|plot		|删除plot	|
 |drawRectBegin	|	-	|-		|开始绘制矩形		|
+|drawRectFinish	|	-	|-		|结束绘制矩形		|
+|setCanvasDragZoom	|	Boolean	|true/false		|设置允许拖动缩放		|
 |getPlotCaches	| 	-	|-	|获取绘制的plot数据缓存		|
+|getSelection	| 	-	|-	|获取当前选中的plot		|
+|getOffset	| 	-	|-	|获取当前canvas偏移值，放大比例{scale:1,x:0,y:0}		|
+|setOffset	| 	Object	|{scale:1,x:0,y:0}	|设置当前canvas偏移值，放大比例		|
+|getData	| 	-	|-|获取canvasPlot的默认绘制plot数据,偏移值和缩放比例。{offset:{scale:1,x:0,y:0},data:[]}		|
+|setData	| 	Object	|{offset:{scale:1,x:0,y:0},data:[]}	|canvasPlot的默认绘制plot数据,偏移值和缩放比例（可以用来回显上次的数据		|
+|screenshot	| 	String	|jpg/png等图片格式	|当前canvas截图，返回base64		|
+|downLoad	| 	String	|jpg/png等图片格式	|当前canvas截图，下载下来成为图片文件	|
+|on	| (String, Function, Boolean)|String：监听的事件名，Function：监听的事件回调, Boolean: 为true时，不可与同类型的事件共存，当前事件函数会覆盖前面同类型的事件 	|on方法监听所有事件	，所有类型事件默认可以同时存在多个，触发事件时会同时执行|
+|off| (String, Function)|String：要卸载的事件名，Function：要卸载的事件函数	|off方卸载on监听的所有事件，第一个参数为true时，卸载所有on监听的事件。第二个参数为空时，卸载第一个参数的同类型的所有事件|
 
 ## on方法监听所有事件-事件名列表
 
