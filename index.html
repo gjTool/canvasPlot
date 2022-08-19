@@ -32,7 +32,7 @@
 				<div style="width:100%;height:100px;background-color:wheat;">
 
 				</div>
-				<div id="container" style="height:calc(100% - 100px);width:100%;">
+				<div id="container" style="height:calc(100% - 100px);width:100%;position: relative;">
 
 				</div>
 			</div>
@@ -44,30 +44,90 @@
 		//lightskyblue
 		var canvasPlot = new CanvasPlot({
 			parentNode: document.querySelector("#container"),
-			width: 500,
-			height: 500,
-			imagePath: '3.jpg'
+			imagePath: '3.jpg',
+			deleteBtnText: "删除",
+			showMenu: true,
+			rectBgColor: "rgba(255, 255, 255, 0.6)",
+			dragMoveButton: "midddleClick" //rightClick midddleClick
 		});
-
 		canvasPlot.setData({
-			offset: {
-				scale: 2.0,
-				x: 415.9,
-				y: 220.1
+			"offset": {
+				"scale": 2,
+				"x": 415.9,
+				"y": 220.1
 			},
-			data: [{
-				x: 212,
-				y: 119,
-				w: 50,
-				h: 50
-			}, {
-				x: 280,
-				y: 126,
-				w: 60,
-				h: 30
-			}]
+			"data": [
+				{
+					"params": ["111", "2222"],
+					"x": 212,
+					"y": 119,
+					"w": 50,
+					"h": 50,
+					"fill": "rgba(255, 255, 255, 0)",
+					"strokeColor": "#0d0efd",
+					"lineWidth": 1,
+					"selected": false,
+					"delselected": false,
+					"sideLength": 10,
+					"rectColor": "#00ff00",
+					"fillColor": "#ffffff",
+					"disabled": false,
+					"dragging": false,
+					"resizing": false,
+					"index": 0,
+					"type": "rect",
+					"uuid": "98849a3e-14c8-5ea0-9847-c829f30a64fa"
+				},
+				{
+					"x": 338,
+					"y": 135.5,
+					"w": 60,
+					"h": 30,
+					"fill": "rgba(255, 255, 255, 0)",
+					"strokeColor": "#0d0efd",
+					"lineWidth": 1,
+					"selected": true,
+					"delselected": false,
+					"sideLength": 10,
+					"rectColor": "#00ff00",
+					"fillColor": "#ffffff",
+					"disabled": false,
+					"dragging": false,
+					"resizing": false,
+					"index": 1,
+					"type": "rect",
+					"uuid": "49beb8ac-8825-d01b-a541-cb4050c0bd66"
+				}
+			]
 		})
 		canvasPlot.drawRectBegin();
+		canvasPlot.on("dragMoveFinish", () => {
+			console.log("dragMoveFinish")
+		})
+		canvasPlot.on("drawing", (selection) => {
+			console.log("drawing", selection)
+		})
+		canvasPlot.on("drawFinish", (selection) => {
+			console.log("drawFinish", selection)
+		})
+		canvasPlot.on("drawMove", (selection) => {
+			console.log("drawMove", selection)
+		})
+		canvasPlot.on("select", (selection) => {
+			console.log("select", selection)
+		})
+		canvasPlot.on("dragPlotMove", (selection) => {
+			console.log("dragPlotMove", selection)
+		})
+		canvasPlot.on("zoom", (offset) => {
+			console.log("zoom", offset)
+		})
+		canvasPlot.on("dblclick", (selection) => {
+			console.log("dblclick", selection)
+		})
+		canvasPlot.on("rightClick", (selection) => {
+			console.log("rightClick", selection)
+		})
 	</script>
 </body>
 

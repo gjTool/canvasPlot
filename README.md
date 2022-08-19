@@ -97,17 +97,19 @@ export default {
 |参数名称	|类型		|取值	|是否必须	|作用				|
 |:---:		|:---:		|:---:	|:---:		|:---:				|
 |parentNode	|  HTMLelement	| -		| √		|canvasPlot的父元素	|
-|width	|  Number	| -		|  √			|canvasPlot的宽	|
-|height	|  Number	| -		|  √				|canvasPlot的高	|
+|width	|  Number	| -		|  -			|canvasPlot的宽，不填默认跟随父元素宽度	|
+|height	|  Number	| -		|  -				|canvasPlot的高，不填默认跟随父元素高度		|
 |imagePath	|  String	| -		|  √			|canvasPlot的图片路径	|
-
+|showMenu	|  Boolean	| -		|  -			|是否显示右键菜单	|
+|rectBgColor	|  String	| -		|  -			|rect矩形内部填充颜色，不填默认中间透明	|
+|dragMoveButton	|  String	| rightClick / midddleClick	|  -			|右键拖动画布或者中键拖动画布	|
 ## methods 方法列表
 
 
 |方法名			|传参				|传参取值			|作用				|
 |:---:			|:---:				|:---:				|:---:				|
 |addRect	| Object			|{x:10,y:10,w:40,h:40}		|手动添加矩形	|
-|delPlot	| Object			|plot		|删除plot	|
+|delPlot	| Object			|plot		|删除plot，不传参默认删除所有plot	|
 |drawRectBegin	|	-	|-		|开始绘制矩形		|
 |drawRectFinish	|	-	|-		|结束绘制矩形		|
 |setCanvasDragZoom	|	Boolean	|true/false		|设置允许拖动缩放		|
@@ -127,5 +129,14 @@ export default {
 
 |事件名			    |作用									|
 |:---:				|:---:									|
-|drawFinish			|监听canvasPlot绘制完成					|
-|dragMoveFinish		|监听canvasPlot拖拽完成		|
+|drawFinish			|监听plot绘制完成					|
+|dragMoveFinish		|监听背景图拖拽完成		|
+|dragPlotMove		|监听plot拖拽完成		|
+|drawing		|监听plot绘制中		|
+|drawMove		|监听plot绘制中（四角边沿拖拽绘制）		|
+|select		|监听plot选择事件		|
+|zoom		|监听缩放事件		|
+|dblclick		|监听plot双击事件		|
+|rightClick		|监听plot右键事件		|
+|removeAll		|监听所有plot删除事件		|
+|removePlot		|监听plot删除事件		|
