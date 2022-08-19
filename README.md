@@ -6,9 +6,9 @@
 
 - [canvasplot博客主页](https://www.gjtool.cn/)  
 
-- [canvasplot项目GitHub地址](https://github.com/gjTool/canvasplot)  
+- [canvasplot项目GitHub地址](https://github.com/gjTool/canvasPlot)  
 
-- [canvasplot项目gitee地址](https://gitee.com/gjTool/canvasplot)
+- [canvasplot项目gitee地址](https://gitee.com/gjTool/canvasPlot)
 
 ### 在线示例
 https://www.gjtool.cn/canvasplot/index.html

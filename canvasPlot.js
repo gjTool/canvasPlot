@@ -4,7 +4,7 @@
  * @update 2022/08/19
  */
 ; (function (g, fn) {
-    var version = "1.0.0";
+    var version = "1.0.1";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -38,7 +38,7 @@
         var borderColor = options.borderColor || "#0d0efd";
         var imagePath = options.imagePath || "";
         var showMenuBool = options.showMenu || false;
-        var dragMoveButton = options.dragMoveButton || "rightClick"; //rightClick midddleClick
+        var dragMoveButton = options.dragMoveButton || "rightClick"; //rightClick middleClick
         canvas.width = options.width || parentNode.offsetWidth;
         canvas.height = options.height || parentNode.offsetHeight;
         // canvas.style = options.border ? 'border: ' + options.border : 'border: 1px solid black';
@@ -486,7 +486,7 @@
             if (dragMoveButton === "rightClick") {
                 rightClick = 2;
                 midddleClick = 1
-            } else if (dragMoveButton === "midddleClick") {
+            } else if (dragMoveButton === "middleClick") {
                 rightClick = 1;
                 midddleClick = 2
             }
