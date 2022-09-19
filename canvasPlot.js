@@ -1,10 +1,10 @@
 /**
  * @author gjtool
  * @created 2022/01/13
- * @update 2022/08/19
+ * @update 2022/09/16
  */
 ; (function (g, fn) {
-    var version = "1.1.0";
+    var version = "1.1.1";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -43,7 +43,12 @@
         canvas.height = options.height || parentNode.offsetHeight;
         // canvas.style = options.border ? 'border: ' + options.border : 'border: 1px solid black';
         var dragStart, dragged, moveEnd = { x: canvas.width / 2, y: canvas.height / 2 };
-        parentNode.appendChild(canvas);
+        var old = parentNode.querySelector("canvas")[0];
+        if (old) {
+            parentNode.removeChild(old)
+        } else {
+            parentNode.appendChild(canvas);
+        }
         var ctx = canvas.getContext('2d');
         var styleBorderLeft = 0;
         var styleBorderTop = 0;
@@ -812,11 +817,33 @@
             }
         }
         CanvasPlot.prototype.getOffset = getOffset;
+
         function setOffset(offset) {
             ctx.setTransform(offset.scale, 0, 0, offset.scale, -offset.x, -offset.y);
             redraw()
         }
+
         CanvasPlot.prototype.setOffset = setOffset;
+
+        CanvasPlot.prototype.destroy = function () {
+            this.clear();
+            parentNode.removeChild(canvas);
+            plotCaches = [];
+            canvasDragZoom = true;
+            dragDrawing = false;
+            selection = null;
+            dragDrawOnce = false;
+            dragoffx = 0;
+            dragoffy = 0;
+            p1 = { x: 0, y: 0 };
+            p2 = { x: 0, y: 0 };
+            drawingType;
+            image = null;
+            timer = null;
+            eventType = {};
+            dragTL = dragTM = dragTR = dragRM = dragBL = dragBM = dragBR = dragLM = false;
+        }
+
         CanvasPlot.prototype.render = function () {
             var _this = this;
             if (imagePath) {
@@ -828,7 +855,6 @@
             }, 100);
         }
         CanvasPlot.prototype.resize = function () {
-            let w = canvas.width, h = canvas.height;
             canvas.width = options.width || parentNode.offsetWidth;
             canvas.height = options.height || parentNode.offsetHeight;
             this.render();
@@ -904,6 +930,16 @@
                     ctx.drawImage(img, 10, 10);
                 }
                 valid = false;
+                _this.fire("setImage", {
+                    state: "success",
+                    msg: "success"
+                })
+            }
+            img.onerror = function (err) {
+                _this.fire("setImage", {
+                    state: "error",
+                    msg: err
+                })
             }
 
         };

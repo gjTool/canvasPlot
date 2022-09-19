@@ -123,7 +123,9 @@ export default {
 |downLoad	| 	String	|jpg/png等图片格式	|当前canvas截图，下载下来成为图片文件	|
 |on	| (String, Function, Boolean)|String：监听的事件名，Function：监听的事件回调, Boolean: 为true时，不可与同类型的事件共存，当前事件函数会覆盖前面同类型的事件 	|on方法监听所有事件	，所有类型事件默认可以同时存在多个，触发事件时会同时执行|
 |off| (String, Function)|String：要卸载的事件名，Function：要卸载的事件函数	|off方卸载on监听的所有事件，第一个参数为true时，卸载所有on监听的事件。第二个参数为空时，卸载第一个参数的同类型的所有事件|
-
+|clear	|	-	|-		|清除画布内容		|
+|setImage	| 	(String, Number,Number)	|String：图片地址，x，y设置当前图片的位置，可选	|设置当前背景图		|
+|destroy	|	-	|-		|销毁实例		|
 ## on方法监听所有事件-事件名列表
 
 
