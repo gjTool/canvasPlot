@@ -4,7 +4,7 @@
  * @update 2022/09/19
  */
 ; (function (g, fn) {
-    var version = "1.1.3";
+    var version = "1.1.4";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -990,6 +990,38 @@
             valid = false;
             _this.fire("removePlot", item)
         };
+        CanvasPlot.prototype.selectPlot = function (item, flag) {
+            if (item === undefined) {
+                plotCaches = [];
+                valid = false;
+                _this.fire("removeAll")
+                return
+            }
+            var plots = plotCaches;
+            var l = plots.length;
+            for (var i = l - 1; i >= 0; i--) {
+                var plot = plots[i];
+                if (!flag) {
+                    plot.selected = false
+                }
+                if (item.uuid === plot.uuid) {
+                    plot.selected = true;
+                }
+            }
+            valid = false;
+            _this.fire("removePlot", item)
+        };
+        CanvasPlot.prototype.flyToPlot = function (item, num) {
+            if (item) {
+                let offset = getOffset();
+                let w = canvas.width;
+                let h = canvas.height;
+                offset.scale = num ? num : 1;
+                offset.x = item.x * offset.scale - (w / 2 - item.x / 2) / offset.scale;
+                offset.y = item.y * offset.scale - (h / 2 - item.y / 2) / offset.scale;
+                setOffset(offset)
+            }
+        }
         CanvasPlot.prototype.addRect = function (options) {
             let obj = new Rect(options);
             if (options.selected) {

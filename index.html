@@ -115,7 +115,11 @@
 		})
 		canvasPlot.on("select", (selection) => {
 			console.log("select", selection)
+
 		})
+		setTimeout(() => {
+			canvasPlot.flyToPlot(canvasPlot.getSelection())
+		}, 3000)
 		canvasPlot.on("dragPlotMove", (selection) => {
 			console.log("dragPlotMove", selection)
 		})
