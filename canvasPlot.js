@@ -1,10 +1,10 @@
 /**
  * @author gjtool
  * @created 2022/01/13
- * @update 2022/09/19
+ * @update 2022/10/13
  */
 ; (function (g, fn) {
-    var version = "1.1.4";
+    var version = "1.1.5";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -57,6 +57,8 @@
             styleBorderLeft = parseFloat(g.getComputedStyle(canvas)['borderLeftWidth']) || 0;
             styleBorderTop = parseFloat(g.getComputedStyle(canvas)['borderTopWidth']) || 0;
         }
+        var canvasLeft = parentNode.offsetLeft;
+        var canvasTop = parentNode.offsetTop;
         var html = document.body.parentNode;
         var htmlTop = html.offsetTop;
         var htmlLeft = html.offsetLeft;
@@ -503,6 +505,7 @@
             var mouse = _this.getMouse(e);
             var mx = mouse.x;
             var my = mouse.y;
+            console.log(mx, my,)
             moveEnd.x = mx;
             moveEnd.y = my;
             if (canvasDragZoom && e.button === rightClick) {
@@ -1071,22 +1074,32 @@
                 valid = true;
             }
         };
-        CanvasPlot.prototype.getMouse = function (e) {
+        function getOffsetLeftTop() {
             var element = canvas,
                 offsetX = 0,
-                offsetY = 0,
-                mx, my;
+                offsetY = 0;
             if (element.offsetParent !== undefined) {
                 do {
                     offsetX += element.offsetLeft;
                     offsetY += element.offsetTop;
                 } while ((element = element.offsetParent));
             }
+            return {
+                left: canvasLeft - offsetX,
+                top: canvasTop - offsetY,
+                offsetX: offsetX,
+                offsetY: offsetY
+            }
+        }
+        CanvasPlot.prototype.getMouse = function (e) {
+            var left = getOffsetLeftTop().left;
+            var top = getOffsetLeftTop().top;
+            var offsetX = getOffsetLeftTop().offsetX;
+            var offsetY = getOffsetLeftTop().offsetY;
             offsetX += styleBorderLeft + htmlLeft;
             offsetY += styleBorderTop + htmlTop;
-
-            mx = e.pageX - offsetX;
-            my = e.pageY - offsetY;
+            var mx = e.pageX - offsetX + left;
+            var my = e.pageY - offsetY + top;
             return {
                 x: mx,
                 y: my
@@ -1223,11 +1236,14 @@
             }
         };
         Rect.prototype.getContainsRectResult = function (mx, my) {
+            var left = getOffsetLeftTop().left;
+            var top = getOffsetLeftTop().top;
+
             var offset = getOffset();
             var width = this.w * offset.scale;
             var height = this.h * offset.scale;
-            var rx = this.x * offset.scale;
-            var ry = this.y * offset.scale;
+            var rx = this.x * offset.scale + left;
+            var ry = this.y * offset.scale + top;
             var xBool = false;
             var yBool = false;
             if (width >= 0) {
@@ -1243,12 +1259,14 @@
             return (xBool && yBool);
         };
         Rect.prototype.getCheckSideLengthResult = function (mx, my) {
+            var left = getOffsetLeftTop().left;
+            var top = getOffsetLeftTop().top;
             var offset = getOffset();
             var width = this.w * offset.scale;
             var height = this.h * offset.scale;
             var sideLength = this.sideLength * offset.scale;
-            var rx = this.x * offset.scale;
-            var ry = this.y * offset.scale;
+            var rx = this.x * offset.scale + left;
+            var ry = this.y * offset.scale + top;
             if (checkDirection(mx, my, rx, ry, sideLength)) {
                 return "topL";
             } else if (selectionDrawComplex && checkDirection(mx, my, rx + width / 2, ry, sideLength)) {
