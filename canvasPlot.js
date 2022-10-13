@@ -4,7 +4,7 @@
  * @update 2022/10/13
  */
 ; (function (g, fn) {
-    var version = "1.1.5";
+    var version = "1.1.6";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -57,8 +57,8 @@
             styleBorderLeft = parseFloat(g.getComputedStyle(canvas)['borderLeftWidth']) || 0;
             styleBorderTop = parseFloat(g.getComputedStyle(canvas)['borderTopWidth']) || 0;
         }
-        var canvasLeft = parentNode.offsetLeft;
-        var canvasTop = parentNode.offsetTop;
+        var canvasLeft = getElementOffset(parentNode).offsetX;
+        var canvasTop = getElementOffset(parentNode).offsetY;
         var html = document.body.parentNode;
         var htmlTop = html.offsetTop;
         var htmlLeft = html.offsetLeft;
@@ -1074,16 +1074,45 @@
                 valid = true;
             }
         };
-        function getOffsetLeftTop() {
-            var element = canvas,
-                offsetX = 0,
+        function getTranslate(element) {
+            var translate = document.defaultView.getComputedStyle(element).transform;
+            if (translate !== "none") {
+                var str = translate.replace(")", "");
+                var arr = str.split(",");
+                return {
+                    l: Number(arr[arr.length - 2]),
+                    t: Number(arr[arr.length - 1])
+                }
+            } else {
+                return {
+                    l: 0,
+                    t: 0
+                }
+            }
+        }
+        function getElementOffset(element) {
+            var offsetX = 0,
                 offsetY = 0;
             if (element.offsetParent !== undefined) {
                 do {
+                    var l = getTranslate(element).l;
+                    var t = getTranslate(element).t;
                     offsetX += element.offsetLeft;
                     offsetY += element.offsetTop;
+                    if (!isNaN(l) && !isNaN(t)) {
+                        offsetX += (-l);
+                        offsetY += (-t);
+                    }
                 } while ((element = element.offsetParent));
             }
+            return {
+                offsetX: offsetX,
+                offsetY: offsetY
+            }
+        }
+        function getOffsetLeftTop() {
+            var offsetX = getElementOffset(canvas).offsetX;
+            var offsetY = getElementOffset(canvas).offsetY;
             return {
                 left: canvasLeft - offsetX,
                 top: canvasTop - offsetY,
@@ -1098,8 +1127,8 @@
             var offsetY = getOffsetLeftTop().offsetY;
             offsetX += styleBorderLeft + htmlLeft;
             offsetY += styleBorderTop + htmlTop;
-            var mx = e.pageX - offsetX + left;
-            var my = e.pageY - offsetY + top;
+            var mx = e.pageX - offsetX - left;
+            var my = e.pageY - offsetY - top;
             return {
                 x: mx,
                 y: my
