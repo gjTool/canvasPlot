@@ -4,7 +4,7 @@
  * @update 2022/10/13
  */
 ; (function (g, fn) {
-    var version = "1.1.6";
+    var version = "1.1.7";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -1081,7 +1081,8 @@
                 var arr = str.split(",");
                 return {
                     l: Number(arr[arr.length - 2]),
-                    t: Number(arr[arr.length - 1])
+                    t: Number(arr[arr.length - 1]),
+                    flag: true
                 }
             } else {
                 return {
@@ -1093,6 +1094,7 @@
         function getElementOffset(element) {
             var offsetX = 0,
                 offsetY = 0;
+            var flag = false;
             if (element.offsetParent !== undefined) {
                 do {
                     var l = getTranslate(element).l;
@@ -1103,21 +1105,27 @@
                         offsetX += (-l);
                         offsetY += (-t);
                     }
+                    if (getTranslate(element).flag) {
+                        flag = true;
+                    }
                 } while ((element = element.offsetParent));
             }
             return {
                 offsetX: offsetX,
-                offsetY: offsetY
+                offsetY: offsetY,
+                flag: flag
             }
         }
         function getOffsetLeftTop() {
             var offsetX = getElementOffset(canvas).offsetX;
             var offsetY = getElementOffset(canvas).offsetY;
+            var flag = getElementOffset(canvas).flag;
             return {
                 left: canvasLeft - offsetX,
                 top: canvasTop - offsetY,
                 offsetX: offsetX,
-                offsetY: offsetY
+                offsetY: offsetY,
+                flag: flag
             }
         }
         CanvasPlot.prototype.getMouse = function (e) {
@@ -1125,10 +1133,19 @@
             var top = getOffsetLeftTop().top;
             var offsetX = getOffsetLeftTop().offsetX;
             var offsetY = getOffsetLeftTop().offsetY;
+            var flag = getOffsetLeftTop().flag;
             offsetX += styleBorderLeft + htmlLeft;
             offsetY += styleBorderTop + htmlTop;
-            var mx = e.pageX - offsetX - left;
-            var my = e.pageY - offsetY - top;
+            var mx = 0, my = 0;
+            console.log(flag)
+            if (flag) {
+                mx = e.pageX - offsetX - left;
+                my = e.pageY - offsetY - top;
+            } else {
+                mx = e.pageX - offsetX + left;
+                my = e.pageY - offsetY + top;
+            }
+
             return {
                 x: mx,
                 y: my
@@ -1194,6 +1211,14 @@
         CanvasPlot.prototype.setCanvasDragZoom = function (bool) {
             canvasDragZoom = bool;
         }
+        CanvasPlot.prototype.attrRect = function (obj) {
+            for (var i = 0; i < plotCaches.length; i++) {
+                for (var k in obj) {
+                    plotCaches[i][k] = obj[k]
+                }
+            }
+        }
+
         var Rect = function (options) {
             this.x = options.x || 0;
             this.y = options.y || 0;
@@ -1207,6 +1232,7 @@
             this.sideLength = sideLength;
             this.rectColor = options.rectColor || selectionRectColor
             this.fillColor = options.fillColor || selectionFillColor
+            this.selectionBorderColor = options.selectionBorderColor || selectionBorderColor
             this.disabled = options.disabled || false;
             this.dragging = false;
             this.resizing = false;
@@ -1228,7 +1254,7 @@
                 }
                 ctx.strokeRect(this.x, this.y, this.w, this.h);
             } else if (this.selected) {
-                ctx.strokeStyle = selectionBorderColor
+                ctx.strokeStyle = this.selectionBorderColor || selectionBorderColor
                 ctx.lineWidth = selectionBorderWidth
                 ctx.strokeRect(this.x, this.y, this.w, this.h);
                 this.drawHandles(ctx);

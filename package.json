@@ -1,6 +1,6 @@
 {
   "name": "canvasplot",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "canvas canvasPlot",
   "main": "canvasPlot.min.js",
   "scripts": {

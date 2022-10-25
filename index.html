@@ -120,6 +120,10 @@
 		})
 		setTimeout(() => {
 			canvasPlot.flyToPlot(canvasPlot.getSelection())
+			canvasPlot.attrRect({
+				rectColor: "#ff0000",
+				selectionBorderColor: "#ff0000"
+			})
 		}, 3000)
 		canvasPlot.on("dragPlotMove", (selection) => {
 			console.log("dragPlotMove", selection)
