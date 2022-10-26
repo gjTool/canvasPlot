@@ -102,40 +102,9 @@
 			]
 		})
 		canvasPlot.drawRectBegin();
-		canvasPlot.on("dragMoveFinish", () => {
-			console.log("dragMoveFinish")
-		})
-		canvasPlot.on("drawing", (selection) => {
-			console.log("drawing", selection)
-		})
-		canvasPlot.on("drawFinish", (selection) => {
-			console.log("drawFinish", selection)
-		})
-		canvasPlot.on("drawMove", (selection) => {
-			console.log("drawMove", selection)
-		})
 		canvasPlot.on("select", (selection) => {
 			console.log("select", selection)
 
-		})
-		setTimeout(() => {
-			canvasPlot.flyToPlot(canvasPlot.getSelection())
-			canvasPlot.attrRect({
-				rectColor: "#ff0000",
-				selectionBorderColor: "#ff0000"
-			})
-		}, 3000)
-		canvasPlot.on("dragPlotMove", (selection) => {
-			console.log("dragPlotMove", selection)
-		})
-		canvasPlot.on("zoom", (offset) => {
-			console.log("zoom", offset)
-		})
-		canvasPlot.on("dblclick", (selection) => {
-			console.log("dblclick", selection)
-		})
-		canvasPlot.on("rightClick", (selection) => {
-			console.log("rightClick", selection)
 		})
 	</script>
 </body>

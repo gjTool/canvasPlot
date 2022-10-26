@@ -1,10 +1,10 @@
 /**
  * @author gjtool
  * @created 2022/01/13
- * @update 2022/10/13
+ * @update 2022/10/25
  */
 ; (function (g, fn) {
-    var version = "1.1.7";
+    var version = "1.1.8";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -487,6 +487,7 @@
         }
 
         function mouseDownClick(e) {
+            selection = null;
             var rightClick = 2;
             var midddleClick = 1
             if (dragMoveButton === "rightClick") {
@@ -505,7 +506,6 @@
             var mouse = _this.getMouse(e);
             var mx = mouse.x;
             var my = mouse.y;
-            console.log(mx, my,)
             moveEnd.x = mx;
             moveEnd.y = my;
             if (canvasDragZoom && e.button === rightClick) {
@@ -687,7 +687,7 @@
             if (drawingType === "rect") {
                 dragTL = dragTM = dragTR = dragRM = dragBL = dragBM = dragBR = dragLM = false;
             }
-            _this.fire("select", selection)
+            _this.fire("select", selection);
         };
         function mouseMoveSelected(e, plot) {
             var offset = getOffset();
@@ -1137,7 +1137,6 @@
             offsetX += styleBorderLeft + htmlLeft;
             offsetY += styleBorderTop + htmlTop;
             var mx = 0, my = 0;
-            console.log(flag)
             if (flag) {
                 mx = e.pageX - offsetX - left;
                 my = e.pageY - offsetY - top;
