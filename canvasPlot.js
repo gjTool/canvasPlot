@@ -1,10 +1,10 @@
 /**
  * @author gjtool
  * @created 2022/01/13
- * @update 2022/10/25
+ * @update 2025/06/12
  */
 ; (function (g, fn) {
-    var version = "1.1.9";
+    var version = "1.1.10";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -830,6 +830,7 @@
         CanvasPlot.prototype.setOffset = setOffset;
 
         CanvasPlot.prototype.destroy = function () {
+            clearTimeout(timer);
             this.clear();
             parentNode.removeChild(canvas);
             plotCaches = [];
