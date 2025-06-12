@@ -4,7 +4,7 @@
  * @update 2025/06/12
  */
 ; (function (g, fn) {
-    var version = "1.1.10";
+    var version = "1.1.11";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
