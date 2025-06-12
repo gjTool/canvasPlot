@@ -4,7 +4,7 @@
  * @update 2022/10/25
  */
 ; (function (g, fn) {
-    var version = "1.1.8";
+    var version = "1.1.9";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -76,7 +76,9 @@
         var p2 = { x: 0, y: 0 };
 
         var drawingType;
-        var image = null;
+        var currentImage = null;
+        var offscreenCanvas = null;
+        var offscreenCtx = null;
         var timer = null;
 
         var eventType = {};
@@ -840,7 +842,9 @@
             p1 = { x: 0, y: 0 };
             p2 = { x: 0, y: 0 };
             drawingType;
-            image = null;
+            currentImage = null;
+            offscreenCanvas = null;
+            offscreenCtx = null;
             timer = null;
             eventType = {};
             dragTL = dragTM = dragTR = dragRM = dragBL = dragBM = dragBR = dragLM = false;
@@ -890,26 +894,33 @@
         CanvasPlot.prototype.addImage = function (url, x, y) {
             var width = canvas.width;
             var height = canvas.height;
-            if (image && image.loaded) {
+            if (currentImage && currentImage.loaded && offscreenCanvas) {
                 if (x !== undefined && y !== undefined) {
-                    ctx.drawImage(image, x, y);
+                    ctx.drawImage(offscreenCanvas, x, y);
                 } else {
-                    // ctx.drawImage(image, (width - image.width) / 2, (height - image.height) / 2);
-                    ctx.drawImage(image, 10, 10);
+                    ctx.drawImage(offscreenCanvas, 10, 10);
                 }
             } else {
                 var img = new Image();
                 img.src = url;
                 img.onload = function () {
-                    image = img;
-                    img.loaded = true
-                    var w = img.width;
-                    var h = img.height;
+                    img.loaded = true;
+                    currentImage = img;
+                    if (!offscreenCanvas) {
+                        offscreenCanvas = document.createElement("canvas");
+                        offscreenCanvas.width = img.width;
+                        offscreenCanvas.height = img.height;
+                        offscreenCtx = offscreenCanvas.getContext('2d');
+                        if (x !== undefined && y !== undefined) {
+                            offscreenCtx.drawImage(img, x, y);
+                        } else {
+                            offscreenCtx.drawImage(img, 10, 10);
+                        }
+                    }
                     if (x !== undefined && y !== undefined) {
-                        ctx.drawImage(img, x, y);
+                        ctx.drawImage(offscreenCanvas, x, y);
                     } else {
-                        // ctx.drawImage(img, (width - w) / 2, (height - h) / 2);
-                        ctx.drawImage(img, 10, 10);
+                        ctx.drawImage(offscreenCanvas, 10, 10);
                     }
                 }
             }
@@ -921,15 +932,24 @@
             var img = new Image();
             img.src = url;
             img.onload = function () {
-                image = img;
-                imagePath = url
                 img.loaded = true
-                var w = img.width;
-                var h = img.height;
+                currentImage = img;
+                imagePath = url;
+                if (!offscreenCanvas) {
+                    offscreenCanvas = document.createElement("canvas");
+                    offscreenCanvas.width = img.width;
+                    offscreenCanvas.height = img.height;
+                    offscreenCtx = offscreenCanvas.getContext('2d');
+                    if (x !== undefined && y !== undefined) {
+                        offscreenCtx.drawImage(img, x, y);
+                    } else {
+                        offscreenCtx.drawImage(img, 10, 10);
+                    }
+                }
                 if (x !== undefined && y !== undefined) {
-                    ctx.drawImage(img, x, y);
+                    ctx.drawImage(offscreenCanvas, x, y);
                 } else {
-                    ctx.drawImage(img, 10, 10);
+                    ctx.drawImage(offscreenCanvas, 10, 10);
                 }
                 valid = false;
                 _this.fire("setImage", {
