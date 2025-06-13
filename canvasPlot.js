@@ -1,10 +1,10 @@
 /**
  * @author gjtool
  * @created 2022/01/13
- * @update 2025/06/12
+ * @update 2025/06/13
  */
 ; (function (g, fn) {
-    var version = "1.1.11";
+    var version = "1.1.16";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -39,6 +39,9 @@
         var imagePath = options.imagePath || "";
         var showMenuBool = options.showMenu || false;
         var dragMoveButton = options.dragMoveButton || "middleClick"; //rightClick middleClick
+        var maxScale = options.maxScale || 3.5;
+        var minScale = options.minScale || 0.1;
+
         canvas.width = options.width || parentNode.offsetWidth;
         canvas.height = options.height || parentNode.offsetHeight;
         // canvas.style = options.border ? 'border: ' + options.border : 'border: 1px solid black';
@@ -80,7 +83,10 @@
         var offscreenCanvas = null;
         var offscreenCtx = null;
         var timer = null;
-
+        var rafId = null;
+        var lastRenderTime = 0;
+        var minRenderInterval = 16; // ~60fps
+        var lastClicks = 0;
         var eventType = {};
         var dragTL, dragTM, dragTR, dragRM, dragBL, dragBM, dragBR, dragLM;
         var _this = this;
@@ -109,12 +115,21 @@
                 }
             }, true)
         }
-
+        var throttle = function (callback, limit = 30) {
+            let lastCall = 0;
+            return function () {
+                const now = Date.now();
+                if (now - lastCall >= limit) {
+                    callback.apply(this, arguments);
+                    lastCall = now;
+                }
+            };
+        }
         canvas.addEventListener('selectstart', function (e) {
             e.preventDefault();
             return false;
         }, false);
-        canvas.oncontextmenu = function (e) {
+        var contextmenu = function (e) {
             e.preventDefault();
             if (r_menu) {
                 r_menu.style.display = "none"
@@ -169,8 +184,9 @@
             }
             return false;
         };
+        canvas.oncontextmenu = throttle(contextmenu);
         canvas.addEventListener('mousedown', mouseDownClick, true);
-        canvas.addEventListener('mousemove', function (e) {
+        var mousemove = function (e) {
             if (e.button === 1) {
                 return
             }
@@ -245,7 +261,8 @@
                 }
             }
 
-        }, true);
+        }
+        canvas.addEventListener('mousemove', throttle(mousemove), true);
         canvas.addEventListener('mouseup', function (e) {
             if (e.button === 1) {
                 return
@@ -284,14 +301,21 @@
         var zoom = function (clicks) { //0.75
             if (canvasDragZoom) {
                 if (clicks == 1) return;
+                var offset = getOffset();
+                if (offset.scale <= minScale && clicks <= -0.6) {
+                    return
+                }
+                if (offset.scale >= maxScale && clicks >= 0.6) {
+                    return
+                }
                 var pt = ctx.transformedPoint(moveEnd.x, moveEnd.y);
                 ctx.translate(pt.x, pt.y);
                 var factor = Math.pow(1.1, clicks);
                 ctx.scale(factor, factor);
                 ctx.translate(-pt.x, -pt.y);
-                redraw();
                 var offset = getOffset();
-                _this.fire("zoom", offset)
+                redraw();
+                _this.fire("zoom", offset);
             }
 
         }
@@ -306,9 +330,7 @@
                 return e.preventDefault() && false;
             }
         };
-
-        canvas.addEventListener('DOMMouseScroll', handleScroll, false);
-        canvas.addEventListener('mousewheel', handleScroll, false);
+        canvas.addEventListener('mousewheel', throttle(handleScroll), false);
         function redraw() {
             _this.clear()
             ctx.save();
@@ -830,7 +852,12 @@
         CanvasPlot.prototype.setOffset = setOffset;
 
         CanvasPlot.prototype.destroy = function () {
-            clearTimeout(timer);
+            // 清除动画循环
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+            clearInterval(timer);
             this.clear();
             parentNode.removeChild(canvas);
             plotCaches = [];
@@ -853,13 +880,28 @@
 
         CanvasPlot.prototype.render = function () {
             var _this = this;
-            if (imagePath) {
-                this.addImage(imagePath)
+            // 清除之前的动画循环
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
             }
-            clearInterval(timer)
-            timer = setInterval(function () {
-                _this.draw();
-            }, 100);
+
+            // 使用 requestAnimationFrame 实现动画循环
+            function animate(timestamp) {
+                // 限制绘制频率（最多60fps）
+                if (timestamp - lastRenderTime >= minRenderInterval) {
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'low';
+                    _this.draw();
+                    lastRenderTime = timestamp;
+                }
+
+                // 继续动画循环
+                rafId = requestAnimationFrame(animate);
+            }
+
+            // 启动动画循环
+            rafId = requestAnimationFrame(animate);
         }
         CanvasPlot.prototype.resize = function () {
             canvas.width = options.width || parentNode.offsetWidth;
@@ -885,6 +927,11 @@
                     this.addRect(obj.data[i])
                 }
             }
+            setTimeout(() => {
+                if (obj.offset) {
+                    setOffset(obj.offset)
+                }
+            }, 300)
         }
         CanvasPlot.prototype.getPlotCaches = function () {
             return plotCaches;
@@ -1072,8 +1119,6 @@
                 var offset = getOffset()
                 var plots = plotCaches;
                 this.clear();
-                // ctx.fillStyle = "#ffffff";
-                // ctx.fillRect(offset.x / offset.scale, offset.y / offset.scale, canvas.width, canvas.height);
                 if (imagePath) {
                     this.addImage(imagePath)
                 }
