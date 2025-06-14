@@ -18,18 +18,19 @@ https://www.gjtool.cn/canvasplot/index.html
 
 #### 一、script标签引入方式
 
+- 	1.div容器 
 
 ```javascript
 <div id="demo" style="width:500px;height:500px;"></div>
 ```
 
-- 	3.引入js  
+- 	2.引入js  
 
 ```javascript
 <script src="canvasPlot.min.js" type="text/javascript" charset="utf-8"></script>
 ```
 
-- 	4.实例化
+- 	3.实例化
 
 ```javascript
 var canvasPlot = new CanvasPlot({

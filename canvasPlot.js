@@ -1,25 +1,25 @@
 /**
  * @author gjtool
  * @created 2022/01/13
- * @update 2025/06/13
+ * @update 2025/06/14
  */
 ; (function (g, fn) {
-    var version = "1.1.16";
+    var version = "1.1.18";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
-            return fn(g, version)
-        })
+            return fn(g, version);
+        });
     } else if (typeof module !== 'undefined' && module.exports) {
-        module.exports = fn(g, version)
+        module.exports = fn(g, version);
     } else {
-        g.CanvasPlot = fn(g, version)
+        g.CanvasPlot = fn(g, version);
     }
 })(typeof window !== 'undefined' ? window : this, function (g, version) {
     'use strict';
     function CanvasPlot(options) {
         if (Object.prototype.toString.call(options) !== '[object Object]') {
-            throw Error("new CanvasPlot(options). Parameter 'options' must be an object.")
+            throw Error("new CanvasPlot(options). Parameter 'options' must be an object.");
         }
 
         var sideLength = 10;
@@ -48,14 +48,13 @@
         var dragStart, dragged, moveEnd = { x: canvas.width / 2, y: canvas.height / 2 };
         var old = parentNode.querySelector("canvas");
         if (old) {
-            parentNode.removeChild(old)
+            parentNode.removeChild(old);
         }
         parentNode.appendChild(canvas);
         var ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
         var styleBorderLeft = 0;
         var styleBorderTop = 0;
-        // ctx.fillStyle = "#ffffff";
-        // ctx.fillRect(0, 0, canvas.width, canvas.height);
         if (g && g.getComputedStyle) {
             styleBorderLeft = parseFloat(g.getComputedStyle(canvas)['borderLeftWidth']) || 0;
             styleBorderTop = parseFloat(g.getComputedStyle(canvas)['borderTopWidth']) || 0;
@@ -74,7 +73,6 @@
         var dragDrawOnce = false;
         var dragoffx = 0;
         var dragoffy = 0;
-
         var p1 = { x: 0, y: 0 };
         var p2 = { x: 0, y: 0 };
 
@@ -82,15 +80,20 @@
         var currentImage = null;
         var offscreenCanvas = null;
         var offscreenCtx = null;
-        var timer = null;
         var rafId = null;
         var lastRenderTime = 0;
-        var minRenderInterval = 16; // ~60fps
-        var lastClicks = 0;
+        var minRenderInterval = 16.66; // ~60fps
+        var imageCache = {};
+        var chunkImage = options.chunkImage || false; //是否开启图片分级处理
+        var chunkSize = options.chunkSize || 512; //最小分级 从512px开始缓存一个级别图片
+        var chunkRatio = options.chunkRatio || 0.5; //每缩放0.5比例切换缓存分级图片
+        var chunkImgCaches = [];
+        var pause = false;
         var eventType = {};
         var dragTL, dragTM, dragTR, dragRM, dragBL, dragBM, dragBR, dragLM;
         var _this = this;
         if (showMenuBool) {
+            if (pause) return;
             var r_menu = document.createElement('div');
             r_menu.className = 'right_menu';
             r_menu.style.position = "absolute";
@@ -103,9 +106,9 @@
             r_menu.addEventListener("click", function (e) {
                 var li = e.target;
                 if (li.nodeName.toLowerCase() === 'li') {
-                    var index = li.getAttribute("index")
+                    var index = li.getAttribute("index");
                     if (index == 0) {
-                        _this.delPlot(selection)
+                        _this.delPlot(selection);
                         selection = null;
                         r_menu.style.display = "none";
                     }
@@ -113,7 +116,7 @@
                         r_menu.style.display = "none";
                     }
                 }
-            }, true)
+            }, true);
         }
         var throttle = function (callback, limit = 30) {
             let lastCall = 0;
@@ -124,21 +127,22 @@
                     lastCall = now;
                 }
             };
-        }
+        };
         canvas.addEventListener('selectstart', function (e) {
             e.preventDefault();
             return false;
         }, false);
         var contextmenu = function (e) {
+            if (pause) return;
             e.preventDefault();
             if (r_menu) {
-                r_menu.style.display = "none"
+                r_menu.style.display = "none";
             }
             if (selection && selection.disabled) {
-                return
+                return;
             }
             if (selection && (selection.dragging || selection.resizing)) {
-                return
+                return;
             }
             if (drawingType === "rect") {
                 var mouse = _this.getMouse(e);
@@ -148,7 +152,7 @@
                 mx += offset.x;
                 my += offset.y;
                 if (showMenuBool) {
-                    r_menu.style.display = "none"
+                    r_menu.style.display = "none";
                 }
                 var plots = plotCaches;
                 var l = plots.length;
@@ -161,7 +165,7 @@
                             plot.delselected = false;
                             valid = false;
                             selection = null;
-                            return false
+                            return false;
                         }
                         selection = plot;
                         plot.selected = true;
@@ -171,7 +175,7 @@
                         if (showMenuBool) {
                             showMenu(e);
                         }
-                        _this.fire("rightClick", e, selection)
+                        _this.fire("rightClick", e, selection);
                     } else {
                         plot.selected = false;
                         plot.delselected = false;
@@ -187,8 +191,9 @@
         canvas.oncontextmenu = throttle(contextmenu);
         canvas.addEventListener('mousedown', mouseDownClick, true);
         var mousemove = function (e) {
+            if (pause) return;
             if (e.button === 1) {
-                return
+                return;
             }
             var mouse = _this.getMouse(e);
             var mx = mouse.x;
@@ -196,7 +201,7 @@
             moveEnd.x = mx;
             moveEnd.y = my;
             if (selection && selection.disabled) {
-                return
+                return;
             }
             if (drawingType === "rect") {
                 var offset = getOffset();
@@ -206,7 +211,7 @@
                     selection.x = (mx - dragoffx) / offset.scale;
                     selection.y = (my - dragoffy) / offset.scale;
                     valid = false;
-                    _this.fire("dragPlotMove", selection)
+                    _this.fire("dragPlotMove", selection);
                 } else {
                     this.style.cursor = 'auto';
                 }
@@ -219,7 +224,7 @@
                     var plot = plots[i];
                     if (plot.contains(mx, my)) {
                         if (plot.disabled) {
-                            return
+                            return;
                         }
                         if (selection === plot) {
                             var state = plot.getCheckSideLengthResult(mx, my);
@@ -261,11 +266,12 @@
                 }
             }
 
-        }
+        };
         canvas.addEventListener('mousemove', throttle(mousemove), true);
         canvas.addEventListener('mouseup', function (e) {
+            if (pause) return;
             if (e.button === 1) {
-                return
+                return;
             }
             var mouse = _this.getMouse(e);
             var mx = mouse.x;
@@ -276,7 +282,7 @@
 
             } else {
                 if (selection && selection.disabled) {
-                    return
+                    return;
                 }
                 if (selection) {
                     selection.dragging = false;
@@ -287,26 +293,28 @@
             this.style.cursor = 'auto';
         }, true);
         canvas.addEventListener('dblclick', function (e) {
+            if (pause) return;
             if (e.button === 1) {
-                return
+                return;
             }
             if (selection && selection.disabled) {
-                return
+                return;
             }
             if (selection && (selection.dragging || selection.resizing)) {
-                return
+                return;
             }
-            _this.fire("dblclick", selection)
+            _this.fire("dblclick", selection);
         }, true);
-        var zoom = function (clicks) { //0.75
+        var zoom = function (clicks) { //0.6
+            if (pause) return;
             if (canvasDragZoom) {
                 if (clicks == 1) return;
                 var offset = getOffset();
                 if (offset.scale <= minScale && clicks <= -0.6) {
-                    return
+                    return;
                 }
                 if (offset.scale >= maxScale && clicks >= 0.6) {
-                    return
+                    return;
                 }
                 var pt = ctx.transformedPoint(moveEnd.x, moveEnd.y);
                 ctx.translate(pt.x, pt.y);
@@ -318,31 +326,34 @@
                 _this.fire("zoom", offset);
             }
 
-        }
+        };
 
         var handleScroll = function (e) {
+            if (pause) return;
             if (canvasDragZoom) {
                 var delta = e.wheelDelta ? e.wheelDelta / 200 : e.detail ? -e.detail : 0;
                 if (delta) zoom(delta);
                 if (r_menu) {
-                    r_menu.style.display = "none"
+                    r_menu.style.display = "none";
                 }
                 return e.preventDefault() && false;
             }
         };
         canvas.addEventListener('mousewheel', throttle(handleScroll), false);
         function redraw() {
-            _this.clear()
+            if (pause) return;
+            _this.clear();
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.restore();
             valid = false;
-            _this.draw()
+            _this.draw();
         }
 
 
         function trackTransforms(ctx) {
+            if (pause) return;
             var svg = document.createElementNS("http://www.w3.org/2000/svg", 'svg');
             var xform = svg.createSVGMatrix();
             ctx.getTransform = function () { return xform; };
@@ -417,57 +428,59 @@
                     pt.x = x; pt.y = y;
                     return pt.matrixTransform(xform.inverse());
                 }
-            }
+            };
         }
 
         function showMenu(e) {
-            var bounding = parentNode.getBoundingClientRect()
+            if (pause) return;
+            var bounding = parentNode.getBoundingClientRect();
             var l = e.clientX - bounding.left;
             var t = e.clientY - bounding.top;
 
             e.cancelBubble = true;
-            r_menu.innerHTML = '<ul style="margin: 0;padding: 10px 0;list-style: none;font-size:12px;"><li index="0" style="padding: 0px 10px;cursor: pointer;color:red;">' + deleteBtnText + '</li></ul>'
-            r_menu.style.left = l + 'px'
-            r_menu.style.top = t + 'px'
+            r_menu.innerHTML = '<ul style="margin: 0;padding: 10px 0;list-style: none;font-size:12px;"><li index="0" style="padding: 0px 10px;cursor: pointer;color:red;">' + deleteBtnText + '</li></ul>';
+            r_menu.style.left = l + 'px';
+            r_menu.style.top = t + 'px';
             r_menu.style.display = "block";
         }
         function mouseDrawRect(e) {
+            if (pause) return;
             if (e.button === 1) {
-                return
+                return;
             }
             if (!dragDrawing) {
-                return
+                return;
             }
-            var offset = getOffset()
+            var offset = getOffset();
             p2.x = e.offsetX;
             p2.y = e.offsetY;
             if (drawingType === 'rect') {
                 var width = Math.abs(p1.x - p2.x);
                 var height = Math.abs(p1.y - p2.y);
-                _this.clear()
+                _this.clear();
                 ctx.beginPath();
                 x = p1.x; y = p1.y;
                 if (p2.x >= x) {
                     if (p2.y >= y) {
                         w = width;
-                        h = height
+                        h = height;
                     } else {
                         w = width;
-                        h = -height
+                        h = -height;
                     }
                 } else {
                     if (p2.y >= y) {
                         w = - width;
-                        h = height
+                        h = height;
                     } else {
                         w = - width;
-                        h = - height
+                        h = - height;
                     }
                 }
 
 
                 valid = false;
-                _this.draw()
+                _this.draw();
                 x += offset.x;
                 y += offset.y;
                 x = x / offset.scale;
@@ -477,12 +490,13 @@
                 ctx.strokeRect(x, y, w, h);
                 ctx.fillStyle = rectBgColor;
                 ctx.fillRect(x, y, w, h);
-                _this.fire("drawing", selection)
+                _this.fire("drawing", selection);
             }
         }
         function mouseDrawCancel(e) {
+            if (pause) return;
             if (e.button === 1) {
-                return
+                return;
             }
             if (drawingType === "rect") {
                 if (w < 0 || h < 0) {
@@ -496,36 +510,37 @@
                         x, y, w, h, color: rectBgColor
                     });
                 }
-                plotCaches = deduplication(plotCaches)
+                plotCaches = deduplication(plotCaches);
                 canvas.removeEventListener("mousemove", mouseDrawRect);
                 if (dragDrawOnce) {
-                    dragDrawing = false
+                    dragDrawing = false;
                 }
                 canvas.removeEventListener("mouseup", mouseDrawCancel);
                 x = undefined; y = undefined; w = undefined; h = undefined;
                 p1 = { x: 0, y: 0 };
                 p2 = { x: 0, y: 0 };
             }
-            _this.fire("drawFinish", selection)
+            _this.fire("drawFinish", selection);
 
         }
 
         function mouseDownClick(e) {
+            if (pause) return;
             selection = null;
             var rightClick = 2;
-            var midddleClick = 1
+            var midddleClick = 1;
             if (dragMoveButton === "rightClick") {
                 rightClick = 2;
-                midddleClick = 1
+                midddleClick = 1;
             } else if (dragMoveButton === "middleClick") {
                 rightClick = 1;
-                midddleClick = 2
+                midddleClick = 2;
             }
             if (r_menu) {
-                r_menu.style.display = "none"
+                r_menu.style.display = "none";
             }
             if (e.button === midddleClick) {
-                return
+                return;
             }
             var mouse = _this.getMouse(e);
             var mx = mouse.x;
@@ -540,13 +555,13 @@
                 dragStart = ctx.transformedPoint(mx, my);
                 dragged = false;
                 canvas.addEventListener("mousemove", mouseDragMove);
-                canvas.addEventListener("mouseup", mouseDragMoveCancel)
+                canvas.addEventListener("mouseup", mouseDragMoveCancel);
             } else {
                 var offset = getOffset();
                 mx += offset.x;
                 my += offset.y;
-                ctx.strokeStyle = borderColor
-                ctx.lineWidth = selectionBorderWidth
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = selectionBorderWidth;
                 var plots = plotCaches;
                 var l = plots.length;
                 var tmpSelected = false;
@@ -559,7 +574,7 @@
                                 plot.delselected = false;
                                 plot.selected = false;
                                 valid = false;
-                                return
+                                return;
                             }
                             selection = plot;
                             selection.dragging = true;
@@ -589,15 +604,15 @@
                     }
                     if (selection) {
                         canvas.style.cursor = 'move';
-                        _this.toTop(selection)
+                        _this.toTop(selection);
                     }
                     if (selection && (selection.dragging || selection.resizing)) {
-                        return
+                        return;
                     }
                     p1.x = e.offsetX;
                     p1.y = e.offsetY;
                     canvas.addEventListener("mousemove", mouseDrawRect);
-                    canvas.addEventListener("mouseup", mouseDrawCancel)
+                    canvas.addEventListener("mouseup", mouseDrawCancel);
                 } else {
                     for (var i = l - 1; i >= 0; i--) {
                         var plot = plots[i];
@@ -607,7 +622,7 @@
                                 plot.delselected = false;
                                 plot.selected = false;
                                 valid = false;
-                                return
+                                return;
                             }
                             selection = plot;
                             selection.dragging = false;
@@ -629,6 +644,7 @@
 
         }
         function mouseDragMove(e) {
+            if (pause) return;
             if (canvasDragZoom) {
                 var mouse = _this.getMouse(e);
                 var mx = mouse.x;
@@ -643,8 +659,9 @@
 
         }
         function mouseDragMoveCancel(e) {
+            if (pause) return;
             if (canvasDragZoom) {
-                _this.fire("dragMoveFinish", dragStart)
+                _this.fire("dragMoveFinish", dragStart);
                 dragStart = null;
                 if (!dragged) zoom(e.shiftKey ? -1 : 1);
                 canvas.removeEventListener("mousemove", mouseDragMove);
@@ -652,10 +669,11 @@
             }
         }
         function mouseDownSelected(e, plot) {
+            if (pause) return;
             if (plot.disabled) {
-                return
+                return;
             }
-            var offset = getOffset()
+            var offset = getOffset();
             var mouse = _this.getMouse(e);
             var mouseX = mouse.x + offset.x;
             var mouseY = mouse.y + offset.y;
@@ -708,12 +726,14 @@
 
         };
         function mouseUpSelected(e) {
+            if (pause) return;
             if (drawingType === "rect") {
                 dragTL = dragTM = dragTR = dragRM = dragBL = dragBM = dragBR = dragLM = false;
             }
             _this.fire("select", selection);
         };
         function mouseMoveSelected(e, plot) {
+            if (pause) return;
             var offset = getOffset();
             var mouse = _this.getMouse(e);
             var mouseX = (mouse.x + offset.x) / offset.scale;
@@ -830,7 +850,7 @@
                     plot.x = mouseX;
                 }
                 valid = false;
-                _this.fire("drawMove", selection)
+                _this.fire("drawMove", selection);
             }
 
         };
@@ -840,13 +860,14 @@
                 scale: xform.d,
                 x: -xform.e,
                 y: -xform.f
-            }
+            };
         }
         CanvasPlot.prototype.getOffset = getOffset;
 
         function setOffset(offset) {
+            if (pause) return;
             ctx.setTransform(offset.scale, 0, 0, offset.scale, -offset.x, -offset.y);
-            redraw()
+            redraw();
         }
 
         CanvasPlot.prototype.setOffset = setOffset;
@@ -857,7 +878,6 @@
                 cancelAnimationFrame(rafId);
                 rafId = null;
             }
-            clearInterval(timer);
             this.clear();
             parentNode.removeChild(canvas);
             plotCaches = [];
@@ -869,14 +889,16 @@
             dragoffy = 0;
             p1 = { x: 0, y: 0 };
             p2 = { x: 0, y: 0 };
-            drawingType;
+            drawingType = undefined;
             currentImage = null;
             offscreenCanvas = null;
             offscreenCtx = null;
-            timer = null;
+            imageCache = null;
+            offscreenCanvas = null;
+            offscreenCtx = null;
             eventType = {};
             dragTL = dragTM = dragTR = dragRM = dragBL = dragBM = dragBR = dragLM = false;
-        }
+        };
 
         CanvasPlot.prototype.render = function () {
             var _this = this;
@@ -885,131 +907,211 @@
                 cancelAnimationFrame(rafId);
                 rafId = null;
             }
-
+            if (pause) return;
             // 使用 requestAnimationFrame 实现动画循环
             function animate(timestamp) {
                 // 限制绘制频率（最多60fps）
                 if (timestamp - lastRenderTime >= minRenderInterval) {
-                    ctx.imageSmoothingEnabled = true;
-                    ctx.imageSmoothingQuality = 'low';
+                    var offset = getOffset();
+                    if (offset && offset.scale >= 3) {
+                        ctx.imageSmoothingQuality = 'high';
+                    } else if (offset && offset.scale >= 1) {
+                        ctx.imageSmoothingQuality = 'medium';
+                    } else {
+                        ctx.imageSmoothingQuality = 'low';
+                    }
                     _this.draw();
                     lastRenderTime = timestamp;
                 }
-
                 // 继续动画循环
                 rafId = requestAnimationFrame(animate);
             }
-
             // 启动动画循环
             rafId = requestAnimationFrame(animate);
-        }
+        };
         CanvasPlot.prototype.resize = function () {
+            if (pause) return;
             canvas.width = options.width || parentNode.offsetWidth;
             canvas.height = options.height || parentNode.offsetHeight;
             this.render();
             var offset = getOffset();
             setOffset(offset);
 
-        }
+        };
         CanvasPlot.prototype.getData = function () {
             return {
                 offset: getOffset(),
                 data: plotCaches
-            }
-        }
+            };
+        };
         CanvasPlot.prototype.setData = function (obj) {
             if (obj.offset) {
-                setOffset(obj.offset)
+                setOffset(obj.offset);
             }
             if (obj.data) {
                 for (var i = 0; i < obj.data.length; i++) {
                     obj.data[i].color = obj.data[i].color || rectBgColor;
-                    this.addRect(obj.data[i])
+                    this.addRect(obj.data[i]);
                 }
             }
             setTimeout(() => {
                 if (obj.offset) {
-                    setOffset(obj.offset)
+                    setOffset(obj.offset);
                 }
-            }, 300)
-        }
+            }, 300);
+        };
         CanvasPlot.prototype.getPlotCaches = function () {
             return plotCaches;
-        }
+        };
         CanvasPlot.prototype.getSelection = function () {
             return selection;
-        }
+        };
+
+        var createImageCacheLevels = function (img) {
+            chunkImgCaches = [];
+            const maxDimension = Math.max(img.width, img.height);
+            let level = 0;
+            while (chunkSize < maxDimension) {
+                const canvas = document.createElement('canvas');
+                const canvasCtx = canvas.getContext('2d');
+                const ratio = chunkSize / maxDimension;
+                const scale = img.width / img.height;
+                canvas.width = img.width * ratio;
+                canvas.height = canvas.width / scale;
+
+                canvasCtx.drawImage(img, 0, 0, img.width, img.height,
+                    0, 0, canvas.width, canvas.height);
+                level++;
+                chunkImgCaches.push({
+                    size: chunkSize,
+                    chunkImg: canvas,
+                    with: canvas.width,
+                    height: canvas.height,
+                    ratio: ratio,
+                    level: level
+                });
+
+                chunkSize *= 2; // 每次尺寸翻倍
+            }
+            level++;
+            // 添加原始尺寸作为最后一级
+            chunkImgCaches.push({
+                size: 'original',
+                chunkImg: img,
+                with: img.width,
+                height: img.height,
+                ratio: 1,
+                level: level
+            });
+            console.log("chunkImgCaches", chunkImgCaches);
+            return chunkImgCaches;
+        };
+
+        var getBestImageCacheLevel = function () {
+            if (!currentImage || !currentImage.cachedLevels) return null;
+            var offset = getOffset();
+            // 根据当前缩放比例选择合适的缓存级别
+            const viewportScale = offset.scale;
+            const length = currentImage.cachedLevels.length;
+            let bestLevel = currentImage.cachedLevels[0];
+            for (const level of currentImage.cachedLevels) {
+                if (level.ratio >= viewportScale * chunkRatio) {
+                    bestLevel = level;
+                    break;
+                }
+            }
+            if (viewportScale > 1) {
+                bestLevel = currentImage.cachedLevels[length - 1];
+            }
+            return bestLevel;
+        };
+        CanvasPlot.prototype.getChunkImgCaches = function () {
+            return chunkImgCaches;
+        };
+        CanvasPlot.prototype.getCurrentImage = function () {
+            return currentImage;
+        };
+        CanvasPlot.prototype.getCanvas = function () {
+            return canvas;
+        };
+        CanvasPlot.prototype.getCtx = function () {
+            return ctx;
+        };
         CanvasPlot.prototype.addImage = function (url, x, y) {
-            var width = canvas.width;
-            var height = canvas.height;
-            if (currentImage && currentImage.loaded && offscreenCanvas) {
-                if (x !== undefined && y !== undefined) {
-                    ctx.drawImage(offscreenCanvas, x, y);
+
+        };
+        CanvasPlot.prototype.setImage = function (url, x, y) {
+            if (chunkImage) {
+                const imgCache = getBestImageCacheLevel();
+                if (imgCache && imgCache.chunkImg) {
+                    if (x !== undefined && y !== undefined) {
+                        ctx.drawImage(imgCache.chunkImg, x, y, currentImage.original.width, currentImage.original.height);
+                    } else {
+                        ctx.drawImage(imgCache.chunkImg, 10, 10, currentImage.original.width, currentImage.original.height);
+                    }
                 } else {
-                    ctx.drawImage(offscreenCanvas, 10, 10);
+                    var img = new Image();
+                    img.src = url;
+                    img.onload = function () {
+                        img.loaded = true;
+                        imagePath = url;
+                        // 创建多级缓存
+                        imageCache[url] = {
+                            original: img,
+                            cachedLevels: createImageCacheLevels(img)
+                        };
+                        currentImage = imageCache[url];
+                        const imgCache1 = getBestImageCacheLevel();
+                        if (!imgCache1) return;
+                        if (x !== undefined && y !== undefined) {
+                            ctx.drawImage(imgCache1.chunkImg, x, y, currentImage.original.width, currentImage.original.height);
+                        } else {
+                            ctx.drawImage(imgCache1.chunkImg, 10, 10, currentImage.original.width, currentImage.original.height);
+                        }
+                        valid = false;
+                        _this.fire("setImage", {
+                            state: "success",
+                            msg: "success"
+                        });
+                    };
+                    img.onerror = function (err) {
+                        _this.fire("setImage", {
+                            state: "error",
+                            msg: err
+                        });
+                    };
                 }
             } else {
-                var img = new Image();
-                img.src = url;
-                img.onload = function () {
-                    img.loaded = true;
-                    currentImage = img;
-                    if (!offscreenCanvas) {
-                        offscreenCanvas = document.createElement("canvas");
-                        offscreenCanvas.width = img.width;
-                        offscreenCanvas.height = img.height;
-                        offscreenCtx = offscreenCanvas.getContext('2d');
-                        if (x !== undefined && y !== undefined) {
-                            offscreenCtx.drawImage(img, x, y);
-                        } else {
-                            offscreenCtx.drawImage(img, 10, 10);
-                        }
-                    }
+                if (currentImage && currentImage.loaded && offscreenCanvas) {
                     if (x !== undefined && y !== undefined) {
                         ctx.drawImage(offscreenCanvas, x, y);
                     } else {
                         ctx.drawImage(offscreenCanvas, 10, 10);
                     }
-                }
-            }
-
-        };
-        CanvasPlot.prototype.setImage = function (url, x, y) {
-            var width = canvas.width;
-            var height = canvas.height;
-            var img = new Image();
-            img.src = url;
-            img.onload = function () {
-                img.loaded = true
-                currentImage = img;
-                imagePath = url;
-                if (!offscreenCanvas) {
-                    offscreenCanvas = document.createElement("canvas");
-                    offscreenCanvas.width = img.width;
-                    offscreenCanvas.height = img.height;
-                    offscreenCtx = offscreenCanvas.getContext('2d');
-                    if (x !== undefined && y !== undefined) {
-                        offscreenCtx.drawImage(img, x, y);
-                    } else {
-                        offscreenCtx.drawImage(img, 10, 10);
-                    }
-                }
-                if (x !== undefined && y !== undefined) {
-                    ctx.drawImage(offscreenCanvas, x, y);
                 } else {
-                    ctx.drawImage(offscreenCanvas, 10, 10);
+                    var img = new Image();
+                    img.src = url;
+                    img.onload = function () {
+                        img.loaded = true;
+                        currentImage = img;
+                        if (!offscreenCanvas) {
+                            offscreenCanvas = document.createElement("canvas");
+                            offscreenCanvas.width = img.width;
+                            offscreenCanvas.height = img.height;
+                            offscreenCtx = offscreenCanvas.getContext('2d');
+                            if (x !== undefined && y !== undefined) {
+                                offscreenCtx.drawImage(img, x, y);
+                            } else {
+                                offscreenCtx.drawImage(img, 10, 10);
+                            }
+                        }
+                        if (x !== undefined && y !== undefined) {
+                            ctx.drawImage(offscreenCanvas, x, y);
+                        } else {
+                            ctx.drawImage(offscreenCanvas, 10, 10);
+                        }
+                    };
                 }
-                valid = false;
-                _this.fire("setImage", {
-                    state: "success",
-                    msg: "success"
-                })
-            }
-            img.onerror = function (err) {
-                _this.fire("setImage", {
-                    state: "error",
-                    msg: err
-                })
             }
 
         };
@@ -1019,25 +1121,25 @@
             for (var i = l - 1; i >= 0; i--) {
                 var plot = plots[i];
                 if (item === plot) {
-                    plots.splice(i, 1)
-                    break
+                    plots.splice(i, 1);
+                    break;
                 }
             };
             item.index = l - 1;
-            plotCaches.push(item)
+            plotCaches.push(item);
         };
 
         CanvasPlot.prototype.addPlot = function (options) {
             var type = options.type || drawingType;
             switch (type) {
                 case "rect":
-                    this.addRect(options)
+                    this.addRect(options);
                     break;
                 case "text":
-                    this.addText(options)
+                    this.addText(options);
                     break;
                 default:
-                    this.addRect(options)
+                    this.addRect(options);
                     break;
             }
 
@@ -1046,53 +1148,73 @@
             if (item === undefined) {
                 plotCaches = [];
                 valid = false;
-                _this.fire("removeAll")
-                return
+                _this.fire("removeAll");
+                return;
             }
             var plots = plotCaches;
             var l = plots.length;
             for (var i = l - 1; i >= 0; i--) {
                 var plot = plots[i];
                 if (item.uuid === plot.uuid) {
-                    plots.splice(i, 1)
-                    break
+                    plots.splice(i, 1);
+                    break;
                 }
             }
             valid = false;
-            _this.fire("removePlot", item)
+            _this.fire("removePlot", item);
+        };
+        CanvasPlot.prototype.getPlotById = function (id) {
+            var plots = plotCaches;
+            var l = plots.length;
+            var plot;
+            for (var i = l - 1; i >= 0; i--) {
+                if (id === plot.uuid) {
+                    plot = plots[i];
+                    break;
+                }
+            }
+            return plot;
         };
         CanvasPlot.prototype.selectPlot = function (item, flag) {
             if (item === undefined) {
                 plotCaches = [];
                 valid = false;
-                _this.fire("removeAll")
-                return
+                _this.fire("removeAll");
+                return;
             }
             var plots = plotCaches;
             var l = plots.length;
             for (var i = l - 1; i >= 0; i--) {
                 var plot = plots[i];
                 if (!flag) {
-                    plot.selected = false
+                    plot.selected = false;
                 }
                 if (item.uuid === plot.uuid) {
                     plot.selected = true;
                 }
             }
             valid = false;
-            _this.fire("removePlot", item)
+            _this.fire("removePlot", item);
         };
         CanvasPlot.prototype.flyToPlot = function (item, num) {
-            if (item) {
-                let offset = getOffset();
-                let w = canvas.width;
-                let h = canvas.height;
-                offset.scale = num ? num : 1;
-                offset.x = item.x * offset.scale - (w / 2 - item.x / 2) / offset.scale;
-                offset.y = item.y * offset.scale - (h / 2 - item.y / 2) / offset.scale;
-                setOffset(offset)
+            if (Object.prototype.toString.call(item) === '[object String]') {
+                item = this.getPlotById(item);
             }
-        }
+            if (Object.prototype.toString.call(item) === '[object Object]') {
+                if (item.uuid) {
+                    var offset = getOffset();
+                    var targetScale = num ? num : offset.scale;
+                    let scaledCenterX = (item.x + item.w / 2) * targetScale;
+                    let scaledCenterY = (item.y + item.h) * targetScale;
+                    let canvasCenterX = canvas.width / 2;
+                    let canvasCenterY = canvas.height / 2;
+                    offset.x = scaledCenterX - canvasCenterX;
+                    offset.y = scaledCenterY - canvasCenterY;
+                    offset.scale = targetScale;
+                    setOffset(offset);
+                }
+            }
+        };
         CanvasPlot.prototype.addRect = function (options) {
             let obj = new Rect(options);
             if (options.selected) {
@@ -1113,14 +1235,15 @@
         CanvasPlot.prototype.changeBgColor = function (color) {
             var color = color ? color : "#ffffff";
             ctx.fillStyle = color;
-        }
+        };
         CanvasPlot.prototype.draw = function () {
+            if (pause) return;
             if (!valid) {
-                var offset = getOffset()
+                var offset = getOffset();
                 var plots = plotCaches;
                 this.clear();
                 if (imagePath) {
-                    this.addImage(imagePath)
+                    this.setImage(imagePath);
                 }
                 var l = plots.length;
                 for (var i = 0; i < l; i++) {
@@ -1129,7 +1252,7 @@
                     if (selection !== plot) {
                         if (plot.x === undefined || plot.y === undefined ||
                             plot.w === undefined || plot.h === undefined) {
-                            continue
+                            continue;
                         };
                         plots[i].draw(ctx);
                     }
@@ -1149,12 +1272,12 @@
                     l: Number(arr[arr.length - 2]),
                     t: Number(arr[arr.length - 1]),
                     flag: true
-                }
+                };
             } else {
                 return {
                     l: 0,
                     t: 0
-                }
+                };
             }
         }
         function getElementOffset(element) {
@@ -1180,7 +1303,7 @@
                 offsetX: offsetX,
                 offsetY: offsetY,
                 flag: flag
-            }
+            };
         }
         function getOffsetLeftTop() {
             var offsetX = getElementOffset(canvas).offsetX;
@@ -1192,7 +1315,7 @@
                 offsetX: offsetX,
                 offsetY: offsetY,
                 flag: flag
-            }
+            };
         }
         CanvasPlot.prototype.getMouse = function (e) {
             var left = getOffsetLeftTop().left;
@@ -1217,9 +1340,9 @@
             };
         };
         CanvasPlot.prototype.screenshot = function (type) {
-            type = type || "png"
-            return canvas.toDataURL("image/" + type)
-        }
+            type = type || "png";
+            return canvas.toDataURL("image/" + type);
+        };
         CanvasPlot.prototype.downLoad = function (type) {
             var oA = document.createElement("a");
             oA.download = '';
@@ -1227,18 +1350,28 @@
             document.body.appendChild(oA);
             oA.click();
             document.body.removeChild(oA);
-        }
-
+        };
+        CanvasPlot.prototype.pause = function () {
+            pause = true;
+            // 清除动画循环
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+        };
+        CanvasPlot.prototype.resume = function () {
+            pause = false;
+        };
         CanvasPlot.prototype.on = function (type, callback, flag) {
             if (Object.prototype.toString.call(callback) !== "[object Function]") {
-                throw Error("CanvasPlot.on('" + type + "',fn). Parameter 'fn' must be a function.")
+                throw Error("CanvasPlot.on('" + type + "',fn). Parameter 'fn' must be a function.");
             }
             if (flag === true) {
-                eventType[type] = [callback]
+                eventType[type] = [callback];
             } else if (eventType[type] && eventType[type] instanceof Array) {
-                eventType[type].push(callback)
+                eventType[type].push(callback);
             } else {
-                eventType[type] = [callback]
+                eventType[type] = [callback];
             }
         };
         CanvasPlot.prototype.off = function (type, func) {
@@ -1255,34 +1388,34 @@
                     return handlers.splice(index, 1);
                 }
             }
-        }
-        CanvasPlot.prototype.fire = function (type, state1, state2) {
+        };
+        CanvasPlot.prototype.fire = function (type, state, state1, state2) {
             var handlers = eventType[type];
             if (handlers && handlers instanceof Array) {
                 for (var i = 0; i < handlers.length; i++) {
-                    handlers[i] && handlers[i].call(this, state1, state2)
+                    handlers[i] && handlers[i].call(this, state, state1, state2);
                 }
             }
         };
         CanvasPlot.prototype.drawRectBegin = function (bool) {
             dragDrawing = true;
             drawingType = "rect";
-            dragDrawOnce = bool || false
-        }
+            dragDrawOnce = bool || false;
+        };
         CanvasPlot.prototype.drawRectFinish = function () {
             dragDrawing = false;
             drawingType = undefined;
-        }
+        };
         CanvasPlot.prototype.setCanvasDragZoom = function (bool) {
             canvasDragZoom = bool;
-        }
+        };
         CanvasPlot.prototype.attrRect = function (obj) {
             for (var i = 0; i < plotCaches.length; i++) {
                 for (var k in obj) {
-                    plotCaches[i][k] = obj[k]
+                    plotCaches[i][k] = obj[k];
                 }
             }
-        }
+        };
 
         var Rect = function (options) {
             this.x = options.x || 0;
@@ -1295,9 +1428,9 @@
             this.selected = options.selected || false;
             this.delselected = options.delselected || false;
             this.sideLength = sideLength;
-            this.rectColor = options.rectColor || selectionRectColor
-            this.fillColor = options.fillColor || selectionFillColor
-            this.selectionBorderColor = options.selectionBorderColor || selectionBorderColor
+            this.rectColor = options.rectColor || selectionRectColor;
+            this.fillColor = options.fillColor || selectionFillColor;
+            this.selectionBorderColor = options.selectionBorderColor || selectionBorderColor;
             this.disabled = options.disabled || false;
             this.dragging = false;
             this.resizing = false;
@@ -1305,7 +1438,7 @@
             this.type = "rect";
             this.uuid = options.uuid || createID();
             this.params = options.params || null;
-        }
+        };
         Rect.prototype.draw = function (ctx) {
             ctx.fillStyle = this.fill;
             ctx.fillRect(this.x, this.y, this.w, this.h);
@@ -1319,10 +1452,12 @@
                 }
                 ctx.strokeRect(this.x, this.y, this.w, this.h);
             } else if (this.selected) {
-                ctx.strokeStyle = this.selectionBorderColor || selectionBorderColor
-                ctx.lineWidth = selectionBorderWidth
+                ctx.strokeStyle = this.selectionBorderColor || selectionBorderColor;
+                ctx.lineWidth = selectionBorderWidth;
                 ctx.strokeRect(this.x, this.y, this.w, this.h);
-                this.drawHandles(ctx);
+                if (dragDrawing) {
+                    this.drawHandles(ctx);
+                }
             }
         };
         Rect.prototype.drawHandles = function (ctx) {
@@ -1418,7 +1553,7 @@
             this.index = options.index || 0;
             this.type = "text";
             this.uuid = createID();
-        }
+        };
         Text.prototype.draw = function (ctx) {
             ctx.font = this.fontSize + " Arial";
             ctx.fillStyle = this.color;
@@ -1429,10 +1564,10 @@
                 ctx.fillStyle = "#ff0000";
             }
             ctx.fillText(this.text, this.x, this.y);
-        }
-        Text.prototype.contains = function (mx, my) { }
-        Text.prototype.getContainsRectResult = function (mx, my) { }
-        Text.prototype.getCheckSideLengthResult = function (mx, my) { }
+        };
+        Text.prototype.contains = function (mx, my) { };
+        Text.prototype.getContainsRectResult = function (mx, my) { };
+        Text.prototype.getCheckSideLengthResult = function (mx, my) { };
         trackTransforms(ctx);
         this.render();
     }
@@ -1464,9 +1599,9 @@
     function deduplication(arr) {
         var obj = {};
         return arr.reduce(function (cur, next) {
-            obj[next.uuid] ? "" : obj[next.uuid] = true && cur.push(next)
-            return cur
-        }, [])
+            obj[next.uuid] ? "" : obj[next.uuid] = true && cur.push(next);
+            return cur;
+        }, []);
 
     }
     return CanvasPlot;
