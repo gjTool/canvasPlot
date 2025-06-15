@@ -4,7 +4,7 @@
  * @update 2025/06/15
  */
 ; (function (g, fn) {
-    var version = "1.1.20";
+    var version = "1.1.21";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -1093,6 +1093,7 @@
                     img.src = url;
                     img.onload = function () {
                         img.loaded = true;
+                        imagePath = url;
                         currentImage = img;
                         if (!offscreenCanvas) {
                             offscreenCanvas = document.createElement("canvas");
