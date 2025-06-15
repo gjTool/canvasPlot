@@ -40,7 +40,7 @@
 		</div>
 
 	</div>
-	<script src="canvasPlot.min.js"></script>
+	<script src="canvasPlot.js"></script>
 	<script>
 		console.log(document.querySelector("#container").offsetTop, document.querySelector("#container").offsetLeft);
 		//lightskyblue
@@ -54,69 +54,20 @@
 			rectBgColor: "rgba(255, 255, 255, 0.6)",
 			dragMoveButton: "rightClick" //rightClick middleClick
 		});
-		canvasPlot.setData({
-			"offset": {
-				"scale": 0.3373836138015744,
-				"x": 10.804594058410942,
-				"y": -156.3979262843914
-			},
-			"data": [
-				{
-					"x": 1839.0804198414166,
-					"y": 998.435264959326,
-					"w": 90.34950566049436,
-					"h": 95.66418246405286,
-					"fill": "rgba(255, 255, 255, 0.6)",
-					"strokeColor": "#0d0efd",
-					"lineWidth": 1,
-					"selected": false,
-					"delselected": false,
-					"sideLength": 10,
-					"rectColor": "#00ff00",
-					"fillColor": "#ffffff",
-					"selectionBorderColor": "#00ff00",
-					"disabled": false,
-					"dragging": false,
-					"resizing": false,
-					"index": 0,
-					"type": "rect",
-					"uuid": "515e84e5-fbb6-9509-8773-4807b6af0a69",
-					"params": null
-				},
-				{
-					"x": 740.4170915227929,
-					"y": 345.60680763881396,
-					"w": 183.76707541126788,
-					"h": 142.27128418936869,
-					"fill": "rgba(255, 255, 255, 0.6)",
-					"strokeColor": "#0d0efd",
-					"lineWidth": 1,
-					"selected": false,
-					"delselected": false,
-					"sideLength": 10,
-					"rectColor": "#00ff00",
-					"fillColor": "#ffffff",
-					"selectionBorderColor": "#00ff00",
-					"disabled": false,
-					"dragging": false,
-					"resizing": false,
-					"index": 1,
-					"type": "rect",
-					"uuid": "c034ec87-4481-7578-b3b9-19b224303a6f",
-					"params": null
-				}
-			]
-		});
-		canvasPlot.drawRectBegin();
+		// canvasPlot.setData();
+		// canvasPlot.drawRectBegin();
+		// window.canvas = canvasPlot.getCanvas();
+		// window.ctx = canvasPlot.getCtx();
+		// canvasPlot.drawTextBegin();
+		// canvasPlot.addText({
+		// 	x: 100,
+		// 	y: 100,
+		// 	text: "hello world",
+		// 	fontSize: 20,
+		// });
 		canvasPlot.on("select", (selection) => {
 			console.log("select", selection);
 
-		});
-		canvasPlot.on("rightClick", (e, selection) => {
-			console.log("rightClick", e, selection);
-			setTimeout(() => {
-				canvasPlot.flyToPlot(selection);
-			}, 3000);
 		});
 		window.canvasPlot = canvasPlot;
 	</script>

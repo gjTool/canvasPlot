@@ -1,10 +1,10 @@
 /**
  * @author gjtool
  * @created 2022/01/13
- * @update 2025/06/14
+ * @update 2025/06/15
  */
 ; (function (g, fn) {
-    var version = "1.1.18";
+    var version = "1.1.20";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -76,7 +76,7 @@
         var p1 = { x: 0, y: 0 };
         var p2 = { x: 0, y: 0 };
 
-        var drawingType;
+        var drawingType = options.drawingType || "rect";
         var currentImage = null;
         var offscreenCanvas = null;
         var offscreenCtx = null;
@@ -1130,8 +1130,7 @@
         };
 
         CanvasPlot.prototype.addPlot = function (options) {
-            var type = options.type || drawingType;
-            switch (type) {
+            switch (drawingType) {
                 case "rect":
                     this.addRect(options);
                     break;
@@ -1224,7 +1223,11 @@
             valid = false;
         };
         CanvasPlot.prototype.addText = function (options) {
-            plotCaches.push(new Text(options));
+            let obj = new Text(options);
+            if (options.selected) {
+                selection = obj;
+            }
+            plotCaches.push(obj);
             valid = false;
         };
         CanvasPlot.prototype.clear = function () {
@@ -1361,6 +1364,7 @@
         };
         CanvasPlot.prototype.resume = function () {
             pause = false;
+            this.render();
         };
         CanvasPlot.prototype.on = function (type, callback, flag) {
             if (Object.prototype.toString.call(callback) !== "[object Function]") {
@@ -1416,7 +1420,22 @@
                 }
             }
         };
-
+        CanvasPlot.prototype.drawTextBegin = function (bool) {
+            dragDrawing = true;
+            drawingType = "text";
+            dragDrawOnce = bool || false;
+        };
+        CanvasPlot.prototype.drawTextFinish = function () {
+            dragDrawing = false;
+            drawingType = undefined;
+        };
+        CanvasPlot.prototype.attrText = function (obj) {
+            for (var i = 0; i < plotCaches.length; i++) {
+                for (var k in obj) {
+                    plotCaches[i][k] = obj[k];
+                }
+            }
+        };
         var Rect = function (options) {
             this.x = options.x || 0;
             this.y = options.y || 0;
@@ -1544,26 +1563,47 @@
         var Text = function (options) {
             this.x = options.x || 0;
             this.y = options.y || 0;
+            this.bold = options.bold === undefined ? '' : 'bold';
             this.fontSize = options.fontSize || "16px";
+            this.fontFamily = options.fontFamily || "Arial"; // "Microsoft YaHei", sans-serif
             this.text = options.text || "这是文本";
-            this.color = options.color === undefined ? 'rgba(255, 255, 255, 0)' : options.color;
+            this.fillColor = options.fillColor === undefined ? 'rgba(0, 0, 0, 1)' : options.fillColor;
+            this.strokeColor = options.strokeColor === undefined ? 'rgba(0, 0, 0, 1)' : options.strokeColor;
             this.selected = options.selected || false;
             this.delselected = options.delselected || false;
             this.disabled = options.disabled || false;
+            this.fill = options.fill === undefined ? true : options.fill;
+            this.stroke = options.stroke === undefined ? false : options.stroke;
+            this.textAlign = options.textAlign || "left";   // 水平对齐：left | center | right
+            this.textBaseline = options.textBaseline || "top"; // 垂直对齐：top | middle | bottom
+            this.shadowColor = options.shadowColor || 'rgba(0,0,0,0)';
+            this.shadowBlur = options.shadowBlur || 10;
+            this.shadowOffsetX = options.shadowOffsetX || 5;
+            this.shadowOffsetY = options.shadowOffsetY || 5;
             this.index = options.index || 0;
             this.type = "text";
             this.uuid = createID();
         };
         Text.prototype.draw = function (ctx) {
-            ctx.font = this.fontSize + " Arial";
-            ctx.fillStyle = this.color;
+            ctx.font = this.bold + '' + this.fontSize + ' ' + this.fontFamily;
+            ctx.fillStyle = this.fillColor;
+            ctx.strokeColor = this.strokeColor;
+            ctx.textAlign = this.textAlign;
+            ctx.textBaseline = this.textBaseline;
             if (this.selected) {
                 ctx.fillStyle = selectionBorderColor;
+                ctx.strokeStyle = selectionBorderColor;
             }
             if (this.delselected) {
                 ctx.fillStyle = "#ff0000";
+                ctx.strokeStyle = "#ff0000";
             }
-            ctx.fillText(this.text, this.x, this.y);
+            if (this.fill) {
+                ctx.fillText(this.text, this.x, this.y);
+            }
+            if (this.stroke) {
+                ctx.strokeText(this.text, this.x, this.y);
+            }
         };
         Text.prototype.contains = function (mx, my) { };
         Text.prototype.getContainsRectResult = function (mx, my) { };
