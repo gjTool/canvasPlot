@@ -46,26 +46,27 @@
 		//lightskyblue
 		var canvasPlot = new CanvasPlot({
 			parentNode: document.querySelector("#container"),
-			imagePath: '1.png',
-			minScale: 0.04,
+			imagePath: '2.png',
+			minScale: 0.01,
 			deleteBtnText: "删除",
-			chunkImage: false,
-			showMenu: false,
+			chunkImage: true,
+			showMenu: true,
 			rectBgColor: "rgba(255, 255, 255, 0.6)",
 			dragMoveButton: "rightClick" //rightClick middleClick
 		});
-		canvasPlot.setImage("1.png", 0, 0);
 		// canvasPlot.setData();
 		// canvasPlot.drawRectBegin();
 		// window.canvas = canvasPlot.getCanvas();
 		// window.ctx = canvasPlot.getCtx();
-		// canvasPlot.drawTextBegin();
-		// canvasPlot.addText({
-		// 	x: 100,
-		// 	y: 100,
-		// 	text: "hello world",
-		// 	fontSize: 20,
-		// });
+		canvasPlot.drawTextBegin();
+		canvasPlot.addText({
+			x: 200,
+			y: 200,
+			text: "这是绘制的文字",
+			fontSize: 40,
+			stroke: true,
+			fill: false
+		});
 		canvasPlot.on("select", (selection) => {
 			console.log("select", selection);
 

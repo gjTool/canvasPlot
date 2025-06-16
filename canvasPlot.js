@@ -21,7 +21,7 @@
         if (Object.prototype.toString.call(options) !== '[object Object]') {
             throw Error("new CanvasPlot(options). Parameter 'options' must be an object.");
         }
-
+        console.time("imgload");
         var sideLength = 10;
         var x, y, w, h;
         var canvas = document.createElement("canvas");
@@ -1069,13 +1069,14 @@
                             ctx.drawImage(imgCache1.chunkImg, 10, 10, currentImage.original.width, currentImage.original.height);
                         }
                         valid = false;
-                        _this.fire("setImage", {
+                        _this.fire("imageLoad", {
                             state: "success",
-                            msg: "success"
+                            msg: img
                         });
+                        console.timeEnd("imgload");
                     };
                     img.onerror = function (err) {
-                        _this.fire("setImage", {
+                        _this.fire("imageLoad", {
                             state: "error",
                             msg: err
                         });
@@ -1111,6 +1112,17 @@
                         } else {
                             ctx.drawImage(offscreenCanvas, 10, 10);
                         }
+                        _this.fire("imageLoad", {
+                            state: "success",
+                            msg: img
+                        });
+                        console.timeEnd("imgload");
+                    };
+                    img.onerror = function (err) {
+                        _this.fire("imageLoad", {
+                            state: "error",
+                            msg: err
+                        });
                     };
                 }
             }
@@ -1131,7 +1143,8 @@
         };
 
         CanvasPlot.prototype.addPlot = function (options) {
-            switch (drawingType) {
+            var type = options.type;
+            switch (type) {
                 case "rect":
                     this.addRect(options);
                     break;
@@ -1254,11 +1267,11 @@
                     var plot = plots[i];
                     plot.index = i;
                     if (selection !== plot) {
-                        if (plot.x === undefined || plot.y === undefined ||
-                            plot.w === undefined || plot.h === undefined) {
+                        if (plot.x === undefined || plot.y === undefined || (plot.type !== "text" && (plot.w === undefined || plot.h === undefined))) {
                             continue;
                         };
                         plots[i].draw(ctx);
+
                     }
                 }
                 if (selection !== null) {
@@ -1565,7 +1578,7 @@
             this.x = options.x || 0;
             this.y = options.y || 0;
             this.bold = options.bold === undefined ? '' : 'bold';
-            this.fontSize = options.fontSize || "16px";
+            this.fontSize = options.fontSize || 16;
             this.fontFamily = options.fontFamily || "Arial"; // "Microsoft YaHei", sans-serif
             this.text = options.text || "这是文本";
             this.fillColor = options.fillColor === undefined ? 'rgba(0, 0, 0, 1)' : options.fillColor;
@@ -1586,7 +1599,7 @@
             this.uuid = createID();
         };
         Text.prototype.draw = function (ctx) {
-            ctx.font = this.bold + '' + this.fontSize + ' ' + this.fontFamily;
+            ctx.font = this.bold + '' + this.fontSize + 'px ' + this.fontFamily;
             ctx.fillStyle = this.fillColor;
             ctx.strokeColor = this.strokeColor;
             ctx.textAlign = this.textAlign;
@@ -1594,6 +1607,9 @@
             if (this.selected) {
                 ctx.fillStyle = selectionBorderColor;
                 ctx.strokeStyle = selectionBorderColor;
+            } else {
+                ctx.fillStyle = this.fillColor;
+                ctx.strokeStyle = this.strokeColor;
             }
             if (this.delselected) {
                 ctx.fillStyle = "#ff0000";
@@ -1605,10 +1621,39 @@
             if (this.stroke) {
                 ctx.strokeText(this.text, this.x, this.y);
             }
+            const metrics = ctx.measureText(this.text);
+            const height = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
+            this.w = metrics.width;
+            this.h = height;
         };
-        Text.prototype.contains = function (mx, my) { };
-        Text.prototype.getContainsRectResult = function (mx, my) { };
-        Text.prototype.getCheckSideLengthResult = function (mx, my) { };
+        Text.prototype.contains = function (mx, my) {
+            if (this.getContainsTextResult(mx, my)) {
+                return true;
+            }
+        };
+        Text.prototype.getContainsTextResult = function (mx, my) {
+            var left = getOffsetLeftTop().left;
+            var top = getOffsetLeftTop().top;
+
+            var offset = getOffset();
+            var width = this.w * offset.scale;
+            var height = this.h * offset.scale;
+            var rx = this.x * offset.scale + left;
+            var ry = this.y * offset.scale + top;
+            var xBool = false;
+            var yBool = false;
+            if (width >= 0) {
+                xBool = (rx <= mx) && (rx + width >= mx);
+            } else {
+                xBool = (rx >= mx) && (rx + width <= mx);
+            }
+            if (height >= 0) {
+                yBool = (ry <= my) && (ry + height >= my);
+            } else {
+                yBool = (ry >= my) && (ry + height <= my);
+            }
+            return (xBool && yBool);
+        };
         trackTransforms(ctx);
         this.render();
     }
