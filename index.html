@@ -40,7 +40,7 @@
 		</div>
 
 	</div>
-	<script src="canvasPlot.js"></script>
+	<script src="canvasPlot.min.js"></script>
 	<script>
 		console.log(document.querySelector("#container").offsetTop, document.querySelector("#container").offsetLeft);
 		//lightskyblue
@@ -60,11 +60,11 @@
 		// window.ctx = canvasPlot.getCtx();
 		canvasPlot.on("imageLoad", (data) => {
 			console.log("imageLoad", data);
-			// canvasPlot.drawTextBegin();
-			// canvasPlot.addText({
-			// 	text: "这是绘制的文字",
-			// 	fontSize: 40,
-			// });
+			canvasPlot.drawTextBegin();
+			canvasPlot.addText({
+				text: "这是绘制的文字",
+				fontSize: 40,
+			});
 		});
 		canvasPlot.on("select", (selection) => {
 			console.log("select", selection);

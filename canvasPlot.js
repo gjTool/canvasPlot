@@ -1,10 +1,10 @@
 /**
  * @author gjtool
  * @created 2022/01/13
- * @update 2025/06/15
+ * @update 2025/06/18
  */
 ; (function (g, fn) {
-    var version = "1.1.21";
+    var version = "1.2.0";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
