@@ -4,7 +4,7 @@
  * @update 2025/06/18
  */
 ; (function (g, fn) {
-    var version = "1.2.0";
+    var version = "1.2.1";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -1836,7 +1836,8 @@
             this.shadowOffsetY = options.shadowOffsetY || 5;
             this.index = options.index || 0;
             this.type = "text";
-            this.uuid = createID();
+            this.uuid = options.uuid || createID();
+            this.params = options.params || null;
         };
         Text.prototype.draw = function (ctx) {
             ctx.font = this.bold + '' + this.fontSize + 'px ' + this.fontFamily;
