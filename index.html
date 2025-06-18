@@ -55,17 +55,16 @@
 			dragMoveButton: "rightClick" //rightClick middleClick
 		});
 		// canvasPlot.setData();
-		// canvasPlot.drawRectBegin();
+		canvasPlot.drawRectBegin();
 		// window.canvas = canvasPlot.getCanvas();
 		// window.ctx = canvasPlot.getCtx();
-		canvasPlot.drawTextBegin();
-		canvasPlot.addText({
-			x: 200,
-			y: 200,
-			text: "这是绘制的文字",
-			fontSize: 40,
-			stroke: true,
-			fill: false
+		canvasPlot.on("imageLoad", (data) => {
+			console.log("imageLoad", data);
+			// canvasPlot.drawTextBegin();
+			// canvasPlot.addText({
+			// 	text: "这是绘制的文字",
+			// 	fontSize: 40,
+			// });
 		});
 		canvasPlot.on("select", (selection) => {
 			console.log("select", selection);

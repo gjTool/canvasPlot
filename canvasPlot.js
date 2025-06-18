@@ -77,6 +77,11 @@
         var p2 = { x: 0, y: 0 };
 
         var drawingType = options.drawingType || "rect";
+
+        var drawingTypeList = ["rect", "circle", "text", "line", "cloudLine", "arrow", "polygon", "free"];
+
+        var drawingText = false;
+
         var currentImage = null;
         var offscreenCanvas = null;
         var offscreenCtx = null;
@@ -145,6 +150,48 @@
                 return;
             }
             if (drawingType === "rect") {
+                var mouse = _this.getMouse(e);
+                var mx = mouse.x;
+                var my = mouse.y;
+                var offset = getOffset();
+                mx += offset.x;
+                my += offset.y;
+                if (showMenuBool) {
+                    r_menu.style.display = "none";
+                }
+                var plots = plotCaches;
+                var l = plots.length;
+                var tmpSelected = false;
+                for (var i = l - 1; i >= 0; i--) {
+                    var plot = plots[i];
+                    if (plot.contains(mx, my) && tmpSelected === false) {
+                        if (plot.disabled) {
+                            plot.selected = false;
+                            plot.delselected = false;
+                            valid = false;
+                            selection = null;
+                            return false;
+                        }
+                        selection = plot;
+                        plot.selected = true;
+                        plot.delselected = true;
+                        valid = false;
+                        tmpSelected = true;
+                        if (showMenuBool) {
+                            showMenu(e);
+                        }
+                        _this.fire("rightClick", e, selection);
+                    } else {
+                        plot.selected = false;
+                        plot.delselected = false;
+                        valid = false;
+                    }
+                }
+                if (tmpSelected === false) {
+                    selection = null;
+                }
+            }
+            if (drawingType === "text") {
                 var mouse = _this.getMouse(e);
                 var mx = mouse.x;
                 var my = mouse.y;
@@ -265,7 +312,47 @@
                     }
                 }
             }
-
+            if (drawingType === "text") {
+                var offset = getOffset();
+                mx += offset.x;
+                my += offset.y;
+                if (selection && drawingText) {
+                    selection.x = (mx - dragoffx) / offset.scale;
+                    selection.y = (my - dragoffy) / offset.scale;
+                    selection.selected = false;
+                    this.style.cursor = 'auto';
+                    valid = false;
+                } else if (selection && selection.dragging) {
+                    selection.x = (mx - dragoffx) / offset.scale;
+                    selection.y = (my - dragoffy) / offset.scale;
+                    valid = false;
+                } else {
+                    this.style.cursor = 'auto';
+                }
+                var plots = plotCaches;
+                var l = plots.length;
+                for (var i = l - 1; i >= 0; i--) {
+                    var plot = plots[i];
+                    if (selection === plot) {
+                        plot.x = selection.x;
+                        plot.y = selection.y;
+                    }
+                    if (plot.contains(mx, my)) {
+                        if (plot.disabled) {
+                            return;
+                        }
+                        if (selection === plot) {
+                            var state = plot.getContainsTextResult(mx, my);
+                            if (drawingText && dragDrawing) {
+                                this.style.cursor = 'auto';
+                            } else {
+                                this.style.cursor = 'move';
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
         };
         canvas.addEventListener('mousemove', throttle(mousemove), true);
         canvas.addEventListener('mouseup', function (e) {
@@ -287,6 +374,13 @@
                 if (selection) {
                     selection.dragging = false;
                     selection.resizing = false;
+                    if (drawingText && dragDrawing) {
+                        drawingText = false;
+                        dragDrawing = false;
+                        canvas.style.cursor = 'auto';
+                        selection = null;
+                        return;
+                    }
                     mouseUpSelected(e);
                 }
             }
@@ -487,9 +581,43 @@
                 y = y / offset.scale;
                 w = w / offset.scale;
                 h = h / offset.scale;
+
                 ctx.strokeRect(x, y, w, h);
                 ctx.fillStyle = rectBgColor;
                 ctx.fillRect(x, y, w, h);
+                _this.fire("drawing", selection);
+            }
+            if (drawingType === 'text') {
+                var width = Math.abs(p1.x - p2.x);
+                var height = Math.abs(p1.y - p2.y);
+                _this.clear();
+                ctx.beginPath();
+                x = p1.x; y = p1.y;
+                if (p2.x >= x) {
+                    if (p2.y >= y) {
+                        w = width;
+                        h = height;
+                    } else {
+                        w = width;
+                        h = -height;
+                    }
+                } else {
+                    if (p2.y >= y) {
+                        w = - width;
+                        h = height;
+                    } else {
+                        w = - width;
+                        h = - height;
+                    }
+                }
+                valid = false;
+                _this.draw();
+                x += offset.x;
+                y += offset.y;
+                x = x / offset.scale;
+                y = y / offset.scale;
+                w = w / offset.scale;
+                h = h / offset.scale;
                 _this.fire("drawing", selection);
             }
         }
@@ -507,7 +635,7 @@
                 }
                 if (x !== undefined && y !== undefined && w !== undefined && h !== undefined && w >= 5 && h >= 5) {
                     _this.addPlot({
-                        x, y, w, h, color: rectBgColor
+                        x, y, w, h, color: rectBgColor, type: "rect"
                     });
                 }
                 plotCaches = deduplication(plotCaches);
@@ -515,6 +643,15 @@
                 if (dragDrawOnce) {
                     dragDrawing = false;
                 }
+                canvas.removeEventListener("mouseup", mouseDrawCancel);
+                x = undefined; y = undefined; w = undefined; h = undefined;
+                p1 = { x: 0, y: 0 };
+                p2 = { x: 0, y: 0 };
+            }
+            if (drawingType === "text") {
+                dragDrawing = false;
+                drawingText = false;
+                canvas.removeEventListener("mousemove", mouseDrawRect);
                 canvas.removeEventListener("mouseup", mouseDrawCancel);
                 x = undefined; y = undefined; w = undefined; h = undefined;
                 p1 = { x: 0, y: 0 };
@@ -613,7 +750,72 @@
                     p1.y = e.offsetY;
                     canvas.addEventListener("mousemove", mouseDrawRect);
                     canvas.addEventListener("mouseup", mouseDrawCancel);
-                } else {
+                } else if (drawingType === "text") {
+                    if (selection) {
+                        if (!drawingText) {
+                            canvas.style.cursor = 'move';
+                            dragDrawing = true;
+                        } else {
+                            drawingText = false;
+                            dragDrawing = false;
+                            canvas.style.cursor = 'auto';
+                            selection = null;
+                            canvas.removeEventListener("mousemove", mouseDrawRect);
+                            canvas.removeEventListener("mouseup", mouseDrawCancel);
+                        }
+                    } else {
+                        for (var i = l - 1; i >= 0; i--) {
+                            var plot = plots[i];
+                            if (plot.contains(mx, my) && tmpSelected === false) {
+                                if (plot.disabled) {
+                                    selection = null;
+                                    plot.delselected = false;
+                                    plot.selected = false;
+                                    valid = false;
+                                    return;
+                                }
+                                selection = plot;
+                                selection.dragging = true;
+                                dragoffx = mx - plot.x * offset.scale;
+                                dragoffy = my - plot.y * offset.scale;
+                                if (selection === plot) {
+                                    if (plots[i].getContainsTextResult(mx, my) && !drawingText) {
+                                        mouseDownSelected(e, plot);
+                                        selection.resizing = true;
+                                        selection.dragging = true;
+                                    } else {
+                                        selection.resizing = false;
+                                    }
+                                }
+                                plot.delselected = false;
+                                plot.selected = true;
+                                valid = false;
+                                tmpSelected = true;
+
+                            } else {
+                                plot.delselected = false;
+                                plot.selected = false;
+                                valid = false;
+                            }
+                        }
+                        if (tmpSelected === false) {
+                            selection = null;
+                        }
+                        if (selection) {
+                            canvas.style.cursor = 'auto';
+                            _this.toTop(selection);
+                        }
+                        if (selection && (selection.dragging || selection.resizing)) {
+                            return;
+                        }
+                        p1.x = e.offsetX;
+                        p1.y = e.offsetY;
+                        dragDrawing = true;
+                        canvas.addEventListener("mousemove", mouseDrawRect);
+                        canvas.addEventListener("mouseup", mouseDrawCancel);
+                    }
+                }
+                else {
                     for (var i = l - 1; i >= 0; i--) {
                         var plot = plots[i];
                         if (plot.contains(mx, my) && tmpSelected === false) {
@@ -625,8 +827,18 @@
                                 return;
                             }
                             selection = plot;
-                            selection.dragging = false;
-                            selection.resizing = false;
+                            selection.dragging = true;
+                            dragoffx = mx - plot.x * offset.scale;
+                            dragoffy = my - plot.y * offset.scale;
+                            if (selection === plot) {
+                                if (plots[i].getContainsTextResult(mx, my)) {
+                                    mouseDownSelected(e, plot);
+                                    selection.resizing = true;
+                                    selection.dragging = false;
+                                } else {
+                                    selection.resizing = false;
+                                }
+                            }
                             plot.delselected = false;
                             plot.selected = true;
                             valid = false;
@@ -638,6 +850,20 @@
                             valid = false;
                         }
                     }
+                    if (tmpSelected === false) {
+                        selection = null;
+                    }
+                    if (selection) {
+                        canvas.style.cursor = 'move';
+                        _this.toTop(selection);
+                    }
+                    if (selection && (selection.dragging || selection.resizing)) {
+                        return;
+                    }
+                    p1.x = e.offsetX;
+                    p1.y = e.offsetY;
+                    canvas.addEventListener("mousemove", mouseDrawRect);
+                    canvas.addEventListener("mouseup", mouseDrawCancel);
                 }
             }
 
@@ -660,6 +886,8 @@
         }
         function mouseDragMoveCancel(e) {
             if (pause) return;
+            drawingText = false;
+            dragDrawing = false;
             if (canvasDragZoom) {
                 _this.fire("dragMoveFinish", dragStart);
                 dragStart = null;
@@ -852,7 +1080,10 @@
                 valid = false;
                 _this.fire("drawMove", selection);
             }
-
+            if (drawingType === "text") {
+                valid = false;
+                _this.fire("drawMove", selection);
+            }
         };
         function getOffset() {
             var xform = ctx.getTransform();
@@ -1238,6 +1469,12 @@
         };
         CanvasPlot.prototype.addText = function (options) {
             let obj = new Text(options);
+            if (drawingText && options.x === undefined) {
+                selection = obj;
+            } else {
+                drawingText = false;
+                dragDrawing = false;
+            }
             if (options.selected) {
                 selection = obj;
             }
@@ -1417,6 +1654,7 @@
         };
         CanvasPlot.prototype.drawRectBegin = function (bool) {
             dragDrawing = true;
+            drawingText = false;
             drawingType = "rect";
             dragDrawOnce = bool || false;
         };
@@ -1434,13 +1672,15 @@
                 }
             }
         };
-        CanvasPlot.prototype.drawTextBegin = function (bool) {
+        CanvasPlot.prototype.drawTextBegin = function () {
             dragDrawing = true;
+            drawingText = true;
             drawingType = "text";
-            dragDrawOnce = bool || false;
+            dragDrawOnce = true;
         };
         CanvasPlot.prototype.drawTextFinish = function () {
             dragDrawing = false;
+            drawingText = false;
             drawingType = undefined;
         };
         CanvasPlot.prototype.attrText = function (obj) {
