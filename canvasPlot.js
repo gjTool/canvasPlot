@@ -1,10 +1,10 @@
 /**
  * @author gjtool
  * @created 2022/01/13
- * @update 2025/06/18
+ * @update 2025/07/10
  */
 ; (function (g, fn) {
-    var version = "1.2.1";
+    var version = "1.2.4";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -247,7 +247,7 @@
             var my = mouse.y;
             moveEnd.x = mx;
             moveEnd.y = my;
-            if (selection && selection.disabled) {
+            if (selection && selection.disabled && !drawingText) {
                 return;
             }
             if (drawingType === "rect") {
@@ -1202,6 +1202,7 @@
             chunkImgCaches = [];
             const maxDimension = Math.max(img.width, img.height);
             let level = 0;
+            chunkSize = options.chunkSize || 512;
             while (chunkSize < maxDimension) {
                 const canvas = document.createElement('canvas');
                 const canvasCtx = canvas.getContext('2d');
@@ -1225,16 +1226,26 @@
                 chunkSize *= 2; // 每次尺寸翻倍
             }
             level++;
+
+            const canvas = document.createElement('canvas');
+            const canvasCtx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.width;
+
+            canvasCtx.drawImage(img, 0, 0, img.width, img.height,
+                0, 0, canvas.width, canvas.height);
+
             // 添加原始尺寸作为最后一级
             chunkImgCaches.push({
                 size: 'original',
-                chunkImg: img,
-                with: img.width,
-                height: img.height,
+                chunkImg: canvas,
+                with: canvas.width,
+                height: canvas.height,
                 ratio: 1,
                 level: level
             });
             console.log("chunkImgCaches", chunkImgCaches);
+            img = null;
             return chunkImgCaches;
         };
 
@@ -1269,9 +1280,6 @@
             return ctx;
         };
         CanvasPlot.prototype.addImage = function (url, x, y) {
-
-        };
-        CanvasPlot.prototype.setImage = function (url, x, y) {
             if (chunkImage) {
                 const imgCache = getBestImageCacheLevel();
                 if (imgCache && imgCache.chunkImg) {
@@ -1356,6 +1364,84 @@
                         });
                     };
                 }
+            }
+        };
+        CanvasPlot.prototype.setImage = function (url, x, y) {
+            var _this = this;
+            if (chunkImage) {
+                var img = new Image();
+                img.src = url;
+                img.onload = function () {
+                    img.loaded = true;
+                    imagePath = url;
+                    // 创建多级缓存
+                    imageCache[url] = {
+                        original: img,
+                        cachedLevels: createImageCacheLevels(img)
+                    };
+                    currentImage = imageCache[url];
+                    const imgCache1 = getBestImageCacheLevel();
+                    if (!imgCache1) return;
+                    if (x !== undefined && y !== undefined) {
+                        ctx.drawImage(imgCache1.chunkImg, x, y, currentImage.original.width, currentImage.original.height);
+                    } else {
+                        ctx.drawImage(imgCache1.chunkImg, 10, 10, currentImage.original.width, currentImage.original.height);
+                    }
+                    valid = false;
+                    redraw();
+                    _this.fire("imageLoad", {
+                        state: "success",
+                        msg: img
+                    });
+                    console.timeEnd("imgload");
+                };
+                img.onerror = function (err) {
+                    _this.fire("imageLoad", {
+                        state: "error",
+                        msg: err
+                    });
+                };
+            } else {
+                imagePath = null;
+                currentImage = null;
+                offscreenCanvas = null;
+                offscreenCtx = null;
+                var img = new Image();
+                img.src = url;
+                img.onload = function () {
+                    img.loaded = true;
+                    imagePath = url;
+                    currentImage = img;
+                    if (!offscreenCanvas) {
+                        offscreenCanvas = document.createElement("canvas");
+                        offscreenCanvas.width = img.width;
+                        offscreenCanvas.height = img.height;
+                        offscreenCtx = offscreenCanvas.getContext('2d');
+                        if (x !== undefined && y !== undefined) {
+                            offscreenCtx.drawImage(img, x, y);
+                        } else {
+                            offscreenCtx.drawImage(img, 10, 10);
+                        }
+                    }
+                    if (x !== undefined && y !== undefined) {
+                        ctx.drawImage(offscreenCanvas, x, y);
+                    } else {
+                        console.log(imagePath, url, img, offscreenCanvas);
+                        ctx.drawImage(offscreenCanvas, 10, 10);
+                    }
+                    redraw();
+                    _this.fire("imageLoad", {
+                        state: "success",
+                        msg: img
+                    });
+                    console.timeEnd("imgload");
+                };
+                img.onerror = function (err) {
+                    _this.fire("imageLoad", {
+                        state: "error",
+                        msg: err
+                    });
+                };
             }
 
         };
@@ -1497,7 +1583,7 @@
                 var plots = plotCaches;
                 this.clear();
                 if (imagePath) {
-                    this.setImage(imagePath);
+                    this.addImage(imagePath);
                 }
                 var l = plots.length;
                 for (var i = 0; i < l; i++) {

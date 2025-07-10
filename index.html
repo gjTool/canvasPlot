@@ -46,7 +46,7 @@
 		//lightskyblue
 		var canvasPlot = new CanvasPlot({
 			parentNode: document.querySelector("#container"),
-			imagePath: '1.png',
+			imagePath: '2.png',
 			minScale: 0.01,
 			deleteBtnText: "删除",
 			chunkImage: true,
@@ -54,18 +54,20 @@
 			rectBgColor: "rgba(255, 255, 255, 0.6)",
 			dragMoveButton: "rightClick" //rightClick middleClick
 		});
+		window.canvasPlot = canvasPlot;
 		// canvasPlot.setData();
-		canvasPlot.drawRectBegin();
+		// canvasPlot.drawRectBegin();
 		// window.canvas = canvasPlot.getCanvas();
 		// window.ctx = canvasPlot.getCtx();
-		canvasPlot.on("imageLoad", (data) => {
-			console.log("imageLoad", data);
-			canvasPlot.drawTextBegin();
-			canvasPlot.addText({
-				text: "这是绘制的文字",
-				fontSize: 40,
-			});
-		});
+		// canvasPlot.on("imageLoad", (data) => {
+		// 	console.log("imageLoad", data);
+		// 	canvasPlot.drawTextBegin();
+		// 	canvasPlot.addText({
+		// 		text: "这是绘制的文字",
+		// 		fontSize: 40,
+		// 		disabled: true
+		// 	});
+		// });
 		canvasPlot.on("select", (selection) => {
 			console.log("select", selection);
 
