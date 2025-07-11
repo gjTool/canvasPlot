@@ -1,10 +1,10 @@
 /**
  * @author gjtool
  * @created 2022/01/13
- * @update 2025/07/10
+ * @update 2025/07/11
  */
 ; (function (g, fn) {
-    var version = "1.2.4";
+    var version = "1.2.5";
     console.log("canvasPlot.js v" + version + "  https://www.gjtool.cn");
     if (typeof define === 'function' && define.amd) {
         define(function () {
@@ -14,6 +14,9 @@
         module.exports = fn(g, version);
     } else {
         g.CanvasPlot = fn(g, version);
+    }
+    if (window) {
+        window.CanvasPlot = fn(g, version);
     }
 })(typeof window !== 'undefined' ? window : this, function (g, version) {
     'use strict';
@@ -2018,5 +2021,5 @@
 
     }
     return CanvasPlot;
-})
+});
 

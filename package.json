@@ -1,9 +1,10 @@
 {
   "name": "canvasplot",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "canvas canvasPlot",
   "main": "canvasPlot.min.js",
   "scripts": {
+    "build": "webpack --config webpack.config.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -21,5 +22,10 @@
   "bugs": {
     "url": "https://github.com/gjTool/canvasPlot/issues"
   },
-  "homepage": "https://github.com/gjTool/canvasPlot#readme"
+  "homepage": "https://github.com/gjTool/canvasPlot#readme",
+  "devDependencies": {
+    "terser-webpack-plugin": "^5.3.14",
+    "webpack": "^5.100.0",
+    "webpack-cli": "^6.0.1"
+  }
 }
